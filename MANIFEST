@@ -1,0 +1,17 @@
+bin/compare-registered-voters
+Changes
+lib/FOEGCL/CSVProvider.pm
+lib/FOEGCL/GOTV/Friend.pm
+lib/FOEGCL/GOTV/Membership.pm
+lib/FOEGCL/GOTV/MembershipProvider.pm
+lib/FOEGCL/GOTV/Voter.pm
+lib/FOEGCL/GOTV/VoterProvider.pm
+Makefile.PL
+MANIFEST			This list of files
+README
+share/current-memberships.csv
+share/votexprt.csv
+t/00-load.t
+t/manifest.t
+t/pod-coverage.t
+t/pod.t
