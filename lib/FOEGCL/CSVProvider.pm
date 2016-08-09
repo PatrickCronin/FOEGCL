@@ -114,7 +114,7 @@ sub _build_record {
     my %record = ();
     foreach my $column_name (keys %{ $self->columns }) {
         $record{$column_name} = $self->_trim(
-            $row->[ $self->columns->{$column_name} - 1 ]
+            $row->[ $self->columns->{ $column_name } - 1 ]
         );
     }
     

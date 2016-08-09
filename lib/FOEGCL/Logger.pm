@@ -1,50 +1,54 @@
-package FOEGCL::GOTV::VoterProvider;
+package FOEGCL::Logger;
 
 use Moo;
-extends 'FOEGCL::CSVProvider';
-use FOEGCL::GOTV::Voter;
+use MooX::Types::MooseLike::Base qw( :all );
+use Carp qw( carp croak );
+use English qw( -no_match_vars );
 
 our $VERSION = '0.01';
 
-around _build_columns => sub {
-    return {
-        'voter_registration_id' => 1,
-        'first_name' => 2,
-        'last_name' => 4,
-        'street_number' => 6,
-        'street_name' => 8,
-        'apartment' => 9,
-        'zip' => 14,
-    };
+has logfile => (
+    is => 'ro',
+    isa => Str,
+    required => 1,
+);
+has _logfile_fh => ( is => 'ro', isa => FileHandle, lazy => 1, builder => 1 );
+
+# Prepare the logfile for writing
+sub _build__logfile_fh {
+    my $self = shift;
+
+    if (-e $self->logfile) {
+        if (! -f $self->logfile || ! -w $self->logfile) {
+            croak "If logfile path exists, it must be a file writable by you, so you can overwrite it.";
+        }
+    }
+
+    open my $fh, '>:encoding(utf8)', $self->logfile
+        or croak 'Failed to open the logfile at ' . $self->logfile . ": $OS_ERROR";
+
+    return $fh;
 };
 
-around _build_skip_header => sub {
-    return 0;
-};
-
-around next_record => sub {
-    my $orig = shift;
+# Close the _logfile_fh if it's open
+sub DEMOLISH {
     my $self = shift;
     
-    my $record = $self->$orig();
-    return if ! defined $record;
+    if (defined $self->_logfile_fh) {
+        close $self->_logfile_fh
+            or carp "Failed to close logfile: $OS_ERROR";
+    }
     
-    my $friend = FOEGCL::GOTV::Voter->new(
-        voter_registration_id => $record->{ voter_registration_id },
-        first_name => $record->{ first_name },
-        last_name => $record->{ last_name },
-        street_address => $self->_clean_street_address(
-            join ' ', grep {
-                defined $_
-            } (
-                $record->{ street_number }, $record->{ street_name }, $record->{ apartment }
-            )
-        ),
-        zip => $record->{ zip },
-    );
+    return;
+}
+
+sub add {
+    my $self = shift;
+    my $text = shift
+        or return;
     
-    return $friend;
-};
+    say { $self->_logfile_fh } $text;
+}
 
 1;
 
@@ -52,11 +56,12 @@ __END__
 
 =head1 NAME
 
-FOEGCL::GOTV::VoterProvider - The great new FOEGCL::GOTV::VoterProvider!
+FOEGCL::Logger - The great new FOEGCL::Logger!
 
 =head1 VERSION
 
 Version 0.01
+
 
 =head1 SYNOPSIS
 
@@ -64,9 +69,9 @@ Quick summary of what the module does.
 
 Perhaps a little code snippet.
 
-    use FOEGCL::GOTV::VoterProvider;
+    use FOEGCL::Logger;
 
-    my $foo = FOEGCL::GOTV::VoterProvider->new();
+    my $foo = FOEGCL::Logger->new();
     ...
 
 =head1 EXPORT
@@ -97,7 +102,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc FOEGCL::GOTV::VoterProvider
+    perldoc FOEGCL::Logger
 
 
 You can also look for information at:
@@ -145,3 +150,4 @@ along with this program.  If not, see L<http://www.gnu.org/licenses/>.
 
 
 =cut
+

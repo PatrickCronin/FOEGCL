@@ -28,32 +28,36 @@ around next_record => sub {
     my $orig = shift;
     my $self = shift;
     
-    my $record = $self->$orig();
-    return if ! defined $record;
+    my $record;
+    do {
+        $record = $self->$orig()
+            or return;
+    }
+    while ! $self->_record_is_valid($record);
     
     my @friends = ();
     push @friends, FOEGCL::GOTV::Friend->new(
-        friend_id => $record->{'friend_id'},
-        first_name => $record->{'first_name'},
-        last_name => $record->{'last_name'},
+        friend_id => $record->{ friend_id },
+        first_name => $record->{ first_name },
+        last_name => $record->{ last_name },
         street_address => $self->_clean_street_address(
-            $record->{'street_address'}
+            $record->{ street_address }
         ),
-        zip => $record->{'zip'},
-        registered_voter => ($record->{'registered_voter'} eq 'TRUE' ? 1 : 0),
+        zip => $record->{ zip },
+        registered_voter => ($record->{ registered_voter } eq 'TRUE' ? 1 : 0),
     );
     
-    if (defined $record->{'spouse_first_name'}
-        && defined $record->{'spouse_last_name'}) {
+    if (defined $record->{ spouse_first_name }
+        && defined $record->{ spouse_last_name }) {
         push @friends, FOEGCL::GOTV::Friend->new(
-            friend_id => $record->{'friend_id'},
-            first_name => $record->{'spouse_first_name'},
-            last_name => $record->{'spouse_last_name'},
+            friend_id => $record->{ friend_id },
+            first_name => $record->{ spouse_first_name },
+            last_name => $record->{ spouse_last_name },
             street_address => $self->_clean_street_address(
-                $record->{'street_address'}
+                $record->{ street_address }
             ),
-            zip => $record->{'zip'},
-            registered_voter => ($record->{'registered_voter'} eq 'TRUE' ? 1 : 0),
+            zip => $record->{ zip },
+            registered_voter => ($record->{ registered_voter } eq 'TRUE' ? 1 : 0),
         );        
     }
     
@@ -62,6 +66,20 @@ around next_record => sub {
         friends => \@friends
     );
 };
+
+sub _record_is_valid {
+    my $self = shift;
+    my $record = shift;
+    
+    return 1 if 
+        defined $record->{ friend_id }
+        && defined $record->{ first_name }
+        && defined $record->{ last_name }
+        && defined $record->{ street_address }
+        && defined $record->{ zip };
+        
+    return 0;
+}
 
 1;
 

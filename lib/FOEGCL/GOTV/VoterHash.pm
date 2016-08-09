@@ -1,50 +1,56 @@
-package FOEGCL::GOTV::VoterProvider;
+package FOEGCL::GOTV::VoterHash;
 
 use Moo;
-extends 'FOEGCL::CSVProvider';
-use FOEGCL::GOTV::Voter;
+extends 'FOEGCL::ItemHash';
+use Geo::Address::Mail::US;
+use Geo::Address::Mail::Standardizer::USPS;
+use List::Util qw( any );
 
 our $VERSION = '0.01';
 
-around _build_columns => sub {
-    return {
-        'voter_registration_id' => 1,
-        'first_name' => 2,
-        'last_name' => 4,
-        'street_number' => 6,
-        'street_name' => 8,
-        'apartment' => 9,
-        'zip' => 14,
-    };
+around _build_hash_keys => sub {
+    return [ qw(last_name first_name zip) ];
 };
 
-around _build_skip_header => sub {
-    return 0;
-};
-
-around next_record => sub {
-    my $orig = shift;
+sub has_voter_like {
     my $self = shift;
+    my $item = shift;
+
+    my $hashed_voters = $self->retrieve_items_like_item($item);
     
-    my $record = $self->$orig();
-    return if ! defined $record;
-    
-    my $friend = FOEGCL::GOTV::Voter->new(
-        voter_registration_id => $record->{ voter_registration_id },
-        first_name => $record->{ first_name },
-        last_name => $record->{ last_name },
-        street_address => $self->_clean_street_address(
-            join ' ', grep {
-                defined $_
-            } (
-                $record->{ street_number }, $record->{ street_name }, $record->{ apartment }
-            )
-        ),
-        zip => $record->{ zip },
+    my $item_street_address = $self->_prepare_street_address_for_comparison(
+        $item->street_address
     );
     
-    return $friend;
-};
+    return any {
+        $item_street_address eq
+            $self->_prepare_street_address_for_comparison($_->street_address)
+    } @$hashed_voters;
+}
+
+sub retrieve_voters_like {
+    my $self = shift;
+    my $item = shift;
+    
+    return $self->retrieve_items_like_item($item);
+}
+
+sub _prepare_street_address_for_comparison {
+    my $self = shift;
+    my $street_address = shift;
+
+    
+    my $address = Geo::Address::Mail::US->new(
+        street => $street_address,
+    );
+
+    my $std = Geo::Address::Mail::Standardizer::USPS->new;
+    my $res = $std->standardize($address);
+    my $corr = $res->standardized_address;
+
+    return $corr->street if $self->case_sensitive;
+    return lc $corr->street;
+}
 
 1;
 
@@ -52,11 +58,12 @@ __END__
 
 =head1 NAME
 
-FOEGCL::GOTV::VoterProvider - The great new FOEGCL::GOTV::VoterProvider!
+FOEGCL::GOTV::VoterHash - The great new FOEGCL::GOTV::VoterHash!
 
 =head1 VERSION
 
 Version 0.01
+
 
 =head1 SYNOPSIS
 
@@ -64,9 +71,9 @@ Quick summary of what the module does.
 
 Perhaps a little code snippet.
 
-    use FOEGCL::GOTV::VoterProvider;
+    use FOEGCL::GOTV::VoterHash;
 
-    my $foo = FOEGCL::GOTV::VoterProvider->new();
+    my $foo = FOEGCL::GOTV::VoterHash->new();
     ...
 
 =head1 EXPORT
@@ -97,7 +104,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc FOEGCL::GOTV::VoterProvider
+    perldoc FOEGCL::GOTV::VoterHash
 
 
 You can also look for information at:
@@ -145,3 +152,4 @@ along with this program.  If not, see L<http://www.gnu.org/licenses/>.
 
 
 =cut
+

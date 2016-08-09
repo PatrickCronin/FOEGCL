@@ -1,17 +1,15 @@
 #!/usr/bin/perl -Ilib -Iblib/lib -I../lib
 
 use Modern::Perl;
+use FOEGCL::App::CompareRegisteredVoters;
 
 {
-    package CompareRegisteredVoters;
+    package StartCompareRegisteredVoters;
     use Moo;
     use MooX::Options;
     use MooX::Types::MooseLike::Base qw( :all );
     use File::Share qw( :all );
     use Path::Tiny;
-    use FOEGCL::GOTV::MembershipProvider;
-    use FOEGCL::GOTV::VoterProvider;
-    use List::Util qw( any );
 
     option membership_csv => (
         is => 'ro',
@@ -34,15 +32,22 @@ use Modern::Perl;
         },
         builder => 1,
     );
-
-    has _membership_provider => ( is => 'ro', isa => Object, lazy => 1, builder => 1 );
-    has _voter_provider => ( is => 'ro', isa => Object, lazy => 1, builder => 1 );
-    has _voters => ( is => 'ro', isa => HashRef, default => sub { {} } );
+    
+    option logfile => (
+        is => 'ro',
+        format => 's',
+        doc => 'path/to/outfile',
+        isa => sub {
+            die "If logfile exists already, it must be a file writable by you."
+            unless (!-e $_[0]) || (-f $_[0] && -w $_[0])
+        },
+        builder => 1,
+    );
 
     sub _build_membership_csv {
         my $self = shift;
 
-        warn "Using distribution membership CSV.\n";
+        warn "Attempting to use distribution membership CSV.\n";
         return $self->_localize_filepath(
             dist_file('FOEGCL', 'current-memberships.csv')
         );
@@ -51,10 +56,14 @@ use Modern::Perl;
     sub _build_voter_csv {
         my $self = shift;
 
-        warn "Using distribution voter CSV.\n";
+        warn "Attempting to use distribution voter CSV.\n";
         return $self->_localize_filepath(
             dist_file('FOEGCL', 'votexprt.csv')
         );
+    }
+    
+    sub _build_logfile {
+        return 'compare-registered-voters.log';
     }
 
     sub _localize_filepath {
@@ -63,179 +72,18 @@ use Modern::Perl;
 
         return path($filepath)->relative(Path::Tiny->cwd);    
     }
-
-    sub _build__membership_provider {
-        my $self = shift;
-
-        return FOEGCL::GOTV::MembershipProvider->new(
-            datafile => $self->membership_csv
-        );
-    }
-
-    sub _build__voter_provider {
-        my $self = shift;
     
-        return FOEGCL::GOTV::VoterProvider->new(
-            datafile => $self->voter_csv
-        );
-    }
-
     sub run {
         my $self = shift;
         
-        # Read voters into memory
-        $self->_load_all_voters;
-        
-        # For each membership, verify registered voter status
-        MEMBERSHIP:
-        while (my $membership = $self->_membership_provider->next_record) {
-            if ($membership->has_registered_voter) {
-                if ($self->_membership_has_direct_registered_voter_hit(@{ $membership->registered_voter_friends })
-                    || $self->_membership_has_assisted_registered_voter_hit(@{ $membership->registered_voter_friends })
-                ) {
-                    # Perfect
-                    say $membership->membership_id . ': perfect';
-                }
-                else {
-                    # Check friend: voter registration record not found, but expected
-                    say $membership->membership_id . ': check';
-                }
-            }
-            else {
-                if ($self->_membership_has_direct_registered_voter_hit(@{ $membership->friends })
-                    || $self->_membership_has_assisted_registered_voter_hit(@{ $membership->friends })
-                ) {
-                    # Check friend: voter registration record found, but not expected
-                    say $membership->membership_id . ': check';
-                }
-                else {
-                    # Confirm friend: voter registration record not found and not expected
-                    say $membership->membership_id . ': confirm';
-                }
-            }
-        }
-    }
-    
-    sub _load_all_voters {
-        my $self = shift;
-
-        while (my $voter = $self->_voter_provider->next_record) {
-            $self->_load_voter($voter);
-        }
-    }
-    
-    sub _load_voter {
-        my $self = shift;
-        my $voter = shift;
-        
-        push @{ $self->_voters->{ lc $voter->last_name }->{ lc $voter->first_name }->{ $voter->{zip} } }, $voter;
-    }
-    
-    sub _membership_has_direct_registered_voter_hit {
-        my $self = shift;
-        my @registered_voter_friends = @_;
-        
-        return any {
-            $self->_friend_has_direct_registered_voter_hit($_)
-        } @registered_voter_friends;
-    }
-
-    sub _friend_has_direct_registered_voter_hit {
-        my $self = shift;
-        my $friend = shift;
-        
-        my $voter_selection = $self->_vote_record_selection($friend);
-        return if ! defined $voter_selection;
-        
-        return $self->_friend_has_direct_voter_selection_hit($friend, $voter_selection);
-    }
-    
-    sub _friend_has_direct_voter_selection_hit {
-        my $self = shift;
-        my $friend = shift;
-        my $voter_selection = shift;
-        
-        return any {
-            lc $friend->street_address eq lc $_->street_address
-        } @$voter_selection;
-    }
-    
-    sub _membership_has_assisted_registered_voter_hit {
-        my $self = shift;
-        my @registered_voter_friends = @_;
-        
-        return any {
-            $self->_friend_has_assisted_registered_voter_hit($_)
-        } @registered_voter_friends;
-    }
-    
-    sub _friend_has_assisted_registered_voter_hit {
-        my $self = shift;
-        my $friend = shift;
-        
-        my $voter_selection = $self->_vote_record_selection($friend);
-        return if ! defined $voter_selection;
-
-        return 1 if 
-            $self->_friend_has_direct_voter_selection_hit($friend, $voter_selection);
-        
-        return 1 if
-            $self->_friend_has_assisted_voter_selection_hit($friend, $voter_selection);
-    }
-    
-    sub _friend_has_assisted_voter_selection_hit {
-        my $self = shift;
-        my $friend = shift;
-        my $voter_selection = shift;
-
-        PROMPT:
-        while (1) {
-            print "No perfect match was found for the following Friend:\n$friend\n";
-            print "Does any of the following voter records match?\n";
-            my $voter_num = 1;
-            foreach my $voter (@$voter_selection) {
-                print "$voter_num\n$voter\n\n";
-                $voter_num++;
-            }
-            
-            print "Type the number of the matching record, or leave blank for none: ";
-            my $user_input = <STDIN>;
-            chomp $user_input;
-            
-            return if $user_input eq '';
-            return $voter_selection->[ $user_input - 1 ] if
-                $user_input =~ m/^\d+$/ && $user_input <= @$voter_selection;
-            
-            print "Input not understood.\n";
-        }
-    }
-    
-    sub _vote_record_selection {
-        my $self = shift;
-        my $friend = shift;
-        
-        if (ref $friend ne 'FOEGCL::GOTV::Friend') {
-            use Data::Dumper;
-            warn Dumper $friend;
-        }
-
-        my @ordered_index_keys = (
-            lc $friend->last_name,
-            lc $friend->first_name,
-            lc $friend->zip
-        );
-        
-        my $vote_record_selection = $self->_voters;
-        foreach my $key (@ordered_index_keys) {
-            return if ! exists $vote_record_selection->{$key};
-            $vote_record_selection = $vote_record_selection->{$key};
-        }
-        
-        return $vote_record_selection;
+        FOEGCL::App::CompareRegisteredVoters->new(
+            voter_csv => $self->voter_csv,
+            membership_csv => $self->membership_csv,
+            logfile => $self->logfile,
+        )->run;
     }
 
     1;
 }
 
-my $crv = CompareRegisteredVoters->new_with_options();
-$crv->run();
+StartCompareRegisteredVoters->new_with_options()->run();
