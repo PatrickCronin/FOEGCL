@@ -3,8 +3,7 @@ package FOEGCL::GOTV::VoterHash;
 use Moo;
 use MooX::Types::MooseLike::Base qw( :all );
 use FOEGCL::ItemHash;
-use Geo::Address::Mail::US;
-use Geo::Address::Mail::Standardizer::USPS;
+use FOEGCL::GOTV::StreetAddress;
 use List::Util qw( any );
 
 our $VERSION = '0.01';
@@ -58,15 +57,7 @@ sub _prepare_street_address_for_comparison {
     my $self = shift;
     my $street_address = shift;
     
-    my $address = Geo::Address::Mail::US->new(
-        street => $street_address,
-    );
-
-    my $std = Geo::Address::Mail::Standardizer::USPS->new;
-    my $res = $std->standardize($address);
-    my $corr = $res->standardized_address;
-
-    return lc $corr->street;
+    return lc FOEGCL::GOTV::StreetAddress->standardize($street_address);
 }
 
 sub any_friends_match_assisted {

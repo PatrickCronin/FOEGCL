@@ -21,11 +21,11 @@ sub stringify {
         $self->zip;
 }
 
-1; # End of FOEGCL::GOTV::Friend
+1;
 
 =head1 NAME
 
-FOEGCL::GOTV::Friend - The great new FOEGCL::GOTV::Friend!
+FOEGCL::GOTV::Friend - A Friend class for Get Out the Vote
 
 =head1 VERSION
 
@@ -33,25 +33,55 @@ Version 0.01
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
+This module defines a Friend class, representing a Friend from the Friends'
+Membership Database.
 
     use FOEGCL::GOTV::Friend;
 
-    my $foo = FOEGCL::GOTV::Friend->new();
-    ...
+    my $friend = FOEGCL::GOTV::Friend->new(
+        friend_id => 4882,
+        first_name => 'Patrick',
+        last_name => 'Cronin',
+        street_address => '418 Broadway',
+        zip => '12207',
+        registered_voter => 1
+    );
+    
+    say $friend;    
 
-=head1 EXPORT
+=head1 ATTRIBUTES
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+=head2 friend_id
 
-=head1 SUBROUTINES/METHODS
+  The ID of the Friend in the Membership Database. Required. Include with call to new(), read-only thereafter.
 
-=head2 function1
+=head2 first_name
 
-=head2 function2
+  The Friend's first name from the Membership Database. Required. Include with call to new(), read-only thereafter.
+
+=head2 last_name
+
+  The Friend's last name from the Membership Database. Required. Include with call to new(), read-only thereafter.
+
+=head2 street_address
+
+  The Friend's street address from the Membership Database. Required. Include with call to new(), read-only thereafter.
+
+=head2 zip
+
+  The Friend's ZIP Code from the Membership Database. Required. Include with call to new(), read-only thereafter.
+
+=head2 registered_voter
+
+  The Friend's voter registration status from the Membership Database. Required. Include with call to new(), read-only thereafter.
+
+=head1 METHODS
+
+=head2 stringify
+
+  Stringifies portions of the object for printing.
+  
+  Also, this method is called when the object is used in string context.
 
 =head1 AUTHOR
 
@@ -63,13 +93,11 @@ Please report any bugs or feature requests to C<bug-foegcl at rt.cpan.org>, or t
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=FOEGCL>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
-
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
     perldoc FOEGCL::GOTV::Friend
-
 
 You can also look for information at:
 
@@ -92,10 +120,6 @@ L<http://cpanratings.perl.org/d/FOEGCL>
 L<http://search.cpan.org/dist/FOEGCL/>
 
 =back
-
-
-=head1 ACKNOWLEDGEMENTS
-
 
 =head1 LICENSE AND COPYRIGHT
 

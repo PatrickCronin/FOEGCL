@@ -4,9 +4,37 @@ use Moo;
 extends 'FOEGCL::CSVProvider';
 use FOEGCL::GOTV::Membership;
 use FOEGCL::GOTV::Friend;
+use FOEGCL::GOTV::StreetAddress;
+use Readonly;
+
+Readonly my $SPOUSE_RECORD => 1;
 
 our $VERSION = '0.01';
 
+# Specify parser options for a CSV exported from MS Access on Windows.
+around _build_parser_options => sub {
+    return {
+        binary => 1,
+        auto_diag => 1,
+        diag_verbose => 1,
+        eol => qq{\r\n},
+        sep_char => qq{,},
+        quote_char => q{"},
+        escape_char => q{"},
+        always_quote => 1,
+        quote_space => 1,
+        quote_null => 1,
+        quote_binary => 1,
+        allow_loose_quotes => 0,
+        allow_loose_escapes => 0,
+        allow_whitespace => 0,
+        blank_is_undef => 0,
+        empty_is_undef => 0,
+        verbatim => 0,
+    };
+};
+
+# Specify columns for the Friends table export
 around _build_columns => sub {
     return {
         friend_id => 1,
@@ -20,10 +48,13 @@ around _build_columns => sub {
     };
 };
 
+# The Friends table export doesn't have a header
 around _build_skip_header => sub {
-    return 1;
+    return 0;
 };
 
+# Customize the underlying method by checking for valid records and returning
+# an FOEGCL::GOTV::Membership record
 around next_record => sub {
     my $orig = shift;
     my $self = shift;
@@ -36,30 +67,10 @@ around next_record => sub {
     while ! $self->_record_is_valid($record);
     
     my @friends = ();
-    push @friends, FOEGCL::GOTV::Friend->new(
-        friend_id => $record->{ friend_id },
-        first_name => $record->{ first_name },
-        last_name => $record->{ last_name },
-        street_address => $self->_clean_street_address(
-            $record->{ street_address }
-        ),
-        zip => $record->{ zip },
-        registered_voter => ($record->{ registered_voter } eq 'TRUE' ? 1 : 0),
-    );
-    
-    if (defined $record->{ spouse_first_name }
-        && defined $record->{ spouse_last_name }) {
-        push @friends, FOEGCL::GOTV::Friend->new(
-            friend_id => $record->{ friend_id },
-            first_name => $record->{ spouse_first_name },
-            last_name => $record->{ spouse_last_name },
-            street_address => $self->_clean_street_address(
-                $record->{ street_address }
-            ),
-            zip => $record->{ zip },
-            registered_voter => ($record->{ registered_voter } eq 'TRUE' ? 1 : 0),
-        );        
-    }
+    push @friends, $self->_friend_from_record($record);
+    push @friends, $self->_friend_from_record($record, $SPOUSE_RECORD) if
+        defined $record->{ spouse_first_name }
+        && defined $record->{ spouse_last_name };
     
     return FOEGCL::GOTV::Membership->new(
         membership_id => $friends[0]->friend_id,
@@ -67,6 +78,7 @@ around next_record => sub {
     );
 };
 
+# Test the validity of a CSV row's values
 sub _record_is_valid {
     my $self = shift;
     my $record = shift;
@@ -81,11 +93,36 @@ sub _record_is_valid {
     return 0;
 }
 
+# Build an FOEGCL::GOTV::Friend object from a CSV record
+sub _friend_from_record {
+    my $self = shift;
+    my $record = shift;
+    my $spouse_record = shift;
+    
+    # Set the base fields
+    my %friend = (
+        friend_id => $record->{ friend_id },
+        street_address => FOEGCL::GOTV::StreetAddress->clean(
+            $record->{ street_address }
+        ),
+        zip => $record->{ zip },
+        registered_voter => ($record->{ registered_voter } eq 'TRUE' ? 1 : 0),
+    );
+    
+    # Add the name fields, either the primary the spouse
+    @friend{qw( first_name last_name )} = 
+        (! defined $spouse_record || ! $spouse_record) ?
+            @{ $record }{qw( first_name last_name )}
+            : @{ $record }{qw( spouse_first_name spouse_last_name )};
+    
+    return FOEGCL::GOTV::Friend->new(%friend);
+}
+
 1;
 
 =head1 NAME
 
-FOEGCL::GOTV::MembershipProvider - The great new FOEGCL::GOTV::MembershipProvider!
+FOEGCL::GOTV::MembershipProvider - Iteration over Memberships in a Membership CSV.
 
 =head1 VERSION
 
@@ -93,35 +130,34 @@ Version 0.01
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+This module extends from L<FOEGCL::CSVProvider>, and provides the configuration
+options specific to the Membership CSV file, which is created by exporting the
+Friends table in the Access Database to Text.
 
-Perhaps a little code snippet.
+It automatically creates a L<FOEGCL::GOTV::Membership> object for each valid CSV
+row.
 
     use FOEGCL::GOTV::MembershipProvider;
 
-    my $foo = FOEGCL::GOTV::MembershipProvider->new();
-    ...
+    my $membership_provider = FOEGCL::GOTV::MembershipProvider->new(
+        datafile => 'Friends.txt'
+    );
+    
+    while (my $membership = $membership_provider->next_record) {
+        say $membership->membership_id;
+    }
 
-=head1 EXPORT
+=head1 ATTRIBUTES
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+  This module extends from L<FOEGCL::CSVProvider> and adds no attributes of its
+  own.
 
-=head1 SUBROUTINES/METHODS
+=head1 METHODS
 
-=head2 function1
+=head2 next_record
 
-=cut
-
-sub function1 {
-}
-
-=head2 function2
-
-=cut
-
-sub function2 {
-}
+  This method returns the next valid membership from the CSV as an
+  L<FOEGCL::GOTV::Membership> object.
 
 =head1 AUTHOR
 
@@ -133,15 +169,11 @@ Please report any bugs or feature requests to C<bug-foegcl at rt.cpan.org>, or t
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=FOEGCL>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
-
-
-
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
     perldoc FOEGCL::GOTV::MembershipProvider
-
 
 You can also look for information at:
 
@@ -165,10 +197,6 @@ L<http://search.cpan.org/dist/FOEGCL/>
 
 =back
 
-
-=head1 ACKNOWLEDGEMENTS
-
-
 =head1 LICENSE AND COPYRIGHT
 
 Copyright 2016 Patrick Cronin.
@@ -185,6 +213,5 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see L<http://www.gnu.org/licenses/>.
-
 
 =cut

@@ -23,7 +23,9 @@ sub registered_voter_friends {
     return \@registered_voter_friends;
 }
 
-1; # End of FOEGCL::GOTV::Membership
+1;
+
+__END__
 
 =head1 NAME
 

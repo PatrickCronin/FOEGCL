@@ -49,6 +49,8 @@ sub DEMOLISH {
     return;
 }
 
+# Specify reasonable defaults, allow subclasses to provide specific
+# implementation.
 sub _build_parser_options {
     return {
         binary => 1,
@@ -71,6 +73,7 @@ sub _build_parser_options {
     };
 }
 
+# Here to allow subclasses provide specific implementation
 sub _build_columns {
     return {};
 }
@@ -96,9 +99,10 @@ sub _build__datafile_fh {
 sub _build__parser {
     my $self = shift;
     
-    return Text::CSV_XS->new($self->_parser_options);
+    return Text::CSV_XS->new($self->parser_options);
 }
 
+# Get the next row from the CSV and return it as a hashref
 sub next_record {
     my $self = shift;
 
@@ -108,6 +112,7 @@ sub next_record {
     return $self->_build_record($row);
 }
 
+# Build a hash of the relevant columns' values from a row
 sub _build_record {
     my $self = shift;
     my $row = shift;
@@ -122,6 +127,7 @@ sub _build_record {
     return \%record;
 }
 
+# Remove whitespace before and after text
 sub _trim {
     my $self = shift;
     my $text = shift
@@ -130,18 +136,6 @@ sub _trim {
     $text =~ s/^\s+|\s+$//g;
     
     return $text;
-}
-
-
-sub _clean_street_address {
-    my $self = shift;
-    my $street_address = shift;
-
-    $street_address =~ s/[\f\t\r\n]/ /g;   # Replace all whitespace with space characters
-    $street_address =~ s/ {2,}/ /g;        # Replace repeating whitespace characters with a single space
-    $street_address = $self->_trim($street_address);
-
-    return $street_address;
 }
 
 1;

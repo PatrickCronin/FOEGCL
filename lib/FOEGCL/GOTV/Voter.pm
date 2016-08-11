@@ -6,6 +6,7 @@ use overload '""' => 'stringify';
 
 our $VERSION = '0.01';
 
+has voter_registration_id => ( is => 'ro', isa => Str, required => 1 );
 has first_name => ( is => 'ro', isa => Str, required => 1 );
 has last_name => ( is => 'ro', isa => Str, required => 1 );
 has street_address => ( is => 'ro', isa => Str, required => 1 );
@@ -25,7 +26,7 @@ __END__
 
 =head1 NAME
 
-FOEGCL::GOTV::Voter - The great new FOEGCL::GOTV::Voter!
+FOEGCL::GOTV::Voter - A Voter class for Get Out the Vote
 
 =head1 VERSION
 
@@ -33,35 +34,50 @@ Version 0.01
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
+This module defines a Voter class, representing a Voter from the Voter
+Registration file.
 
     use FOEGCL::GOTV::Voter;
 
-    my $foo = FOEGCL::GOTV::Voter->new();
-    ...
+    my $voter = FOEGCL::GOTV::Voter->new(
+        voter_registration_id => 848532929458,
+        first_name => 'Patrick',
+        last_name => 'Cronin',
+        street_address => '418 Broadway',
+        zip => 12207,
+    );
+    
+    say $voter;
 
-=head1 EXPORT
+=head1 ATTRIBUTES
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+=head2 voter_registration_id
 
-=head1 SUBROUTINES/METHODS
+  The Voter Registration ID of the Voter from the Voter Registration file. Required. Include with call to new(), read-only thereafter.
 
-=head2 function1
+=head2 first_name
 
-=cut
+  The first name of the Voter from the Voter Registration file. Required. Include with call to new(), read-only thereafter.
 
-sub function1 {
-}
+=head2 last_name
 
-=head2 function2
+  The last name of the Voter from the Voter Registration file. Required. Include with call to new(), read-only thereafter.
 
-=cut
+=head2 street_address
 
-sub function2 {
-}
+  The street address of the Voter from the Voter Registration file. Required. Include with call to new(), read-only thereafter.
+
+=head2 zip
+
+  The ZIP Code of the Voter from the Voter Registration file. Required. Include with call to new(), read-only thereafter.
+
+=head1 METHODS
+
+=head2 stringify
+
+  Stringifies portions of the object for printing.
+  
+  Also, this method is called when the object is used in string context.
 
 =head1 AUTHOR
 
@@ -73,15 +89,11 @@ Please report any bugs or feature requests to C<bug-foegcl at rt.cpan.org>, or t
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=FOEGCL>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
-
-
-
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
     perldoc FOEGCL::GOTV::Voter
-
 
 You can also look for information at:
 
@@ -105,10 +117,6 @@ L<http://search.cpan.org/dist/FOEGCL/>
 
 =back
 
-
-=head1 ACKNOWLEDGEMENTS
-
-
 =head1 LICENSE AND COPYRIGHT
 
 Copyright 2016 Patrick Cronin.
@@ -125,6 +133,5 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see L<http://www.gnu.org/licenses/>.
-
 
 =cut

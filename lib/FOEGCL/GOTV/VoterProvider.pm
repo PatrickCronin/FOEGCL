@@ -2,10 +2,35 @@ package FOEGCL::GOTV::VoterProvider;
 
 use Moo;
 extends 'FOEGCL::CSVProvider';
+use FOEGCL::GOTV::StreetAddress;
 use FOEGCL::GOTV::Voter;
 
 our $VERSION = '0.01';
 
+# Specify parser options for the received voter registration file
+around _build_parser_options => sub {
+    return {
+        binary => 1,
+        auto_diag => 1,
+        diag_verbose => 1,
+        eol => qq{\r\n},
+        sep_char => qq{,},
+        quote_char => q{"},
+        escape_char => q{"},
+        always_quote => 1,
+        quote_space => 1,
+        quote_null => 1,
+        quote_binary => 1,
+        allow_loose_quotes => 0,
+        allow_loose_escapes => 0,
+        allow_whitespace => 0,
+        blank_is_undef => 0,
+        empty_is_undef => 0,
+        verbatim => 0,
+    };
+};
+
+# Specify columns for the recieved voter registration file
 around _build_columns => sub {
     return {
         voter_registration_id => 1,
@@ -18,22 +43,32 @@ around _build_columns => sub {
     };
 };
 
+# The voter registration file didn't come with a header
 around _build_skip_header => sub {
     return 0;
 };
 
+# Customize the underlying method by returning an FOEGCL::GOTV::Voter object
 around next_record => sub {
     my $orig = shift;
     my $self = shift;
     
-    my $record = $self->$orig();
-    return if ! defined $record;
+    my $record = $self->$orig()
+        or return;
+        
+    return $self->_voter_from_record($record);
+};
+
+# Build an FOEGCL::GOTV::Voter object from a CSV record
+sub _voter_from_record {
+    my $self = shift;
+    my $record = shift;
     
-    my $friend = FOEGCL::GOTV::Voter->new(
+    my %voter = (
         voter_registration_id => $record->{ voter_registration_id },
         first_name => $record->{ first_name },
         last_name => $record->{ last_name },
-        street_address => $self->_clean_street_address(
+        street_address => FOEGCL::GOTV::StreetAddress->clean(
             join ' ', grep {
                 defined $_
             } (
@@ -43,8 +78,8 @@ around next_record => sub {
         zip => $record->{ zip },
     );
     
-    return $friend;
-};
+    return FOEGCL::GOTV::Voter->new(%voter);
+}
 
 1;
 
@@ -52,7 +87,7 @@ __END__
 
 =head1 NAME
 
-FOEGCL::GOTV::VoterProvider - The great new FOEGCL::GOTV::VoterProvider!
+FOEGCL::GOTV::VoterProvider - Iteration over Voters in a Voter Registration CSV.
 
 =head1 VERSION
 
@@ -60,25 +95,35 @@ Version 0.01
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+This module extends from L<FOEGCL::CSVProvider>, and provides the configuration
+options specific to the Voter Registration file, which was recieve through
+assistance from the Library Director.
 
-Perhaps a little code snippet.
+It generates a L<FOEGCL::GOTV::Voter> object for each CSV row.
 
     use FOEGCL::GOTV::VoterProvider;
 
-    my $foo = FOEGCL::GOTV::VoterProvider->new();
-    ...
+    my $voter_provider = FOEGCL::GOTV::VoterProvider->new(
+        datafile => 'VOTEXPRT.CSV'
+    );
+    
+    while (my $voter = $voter_provider->next_record) {
+        say $voter->voter_registration_id;
+    }
 
-=head1 EXPORT
+=head1 ATTRIBUTES
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+  This module extends from L<FOEGCL::CSVProvider> and adds no attributes of its
+  own.
 
-=head1 SUBROUTINES/METHODS
+=head1 METHODS
 
-=head2 function1
+=head2 next_record
 
-=head2 function2
+  This method returns the next voter from the CSV as an
+  L<FOEGCL::GOTV::Voter> object. Note that this module creates the street
+  address for the voter by appending the street number, street name, and
+  apartment number if any.
 
 =head1 AUTHOR
 
@@ -90,15 +135,11 @@ Please report any bugs or feature requests to C<bug-foegcl at rt.cpan.org>, or t
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=FOEGCL>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
-
-
-
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
     perldoc FOEGCL::GOTV::VoterProvider
-
 
 You can also look for information at:
 
@@ -122,10 +163,6 @@ L<http://search.cpan.org/dist/FOEGCL/>
 
 =back
 
-
-=head1 ACKNOWLEDGEMENTS
-
-
 =head1 LICENSE AND COPYRIGHT
 
 Copyright 2016 Patrick Cronin.
@@ -142,6 +179,5 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see L<http://www.gnu.org/licenses/>.
-
 
 =cut
