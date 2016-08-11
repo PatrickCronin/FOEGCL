@@ -9,14 +9,14 @@ our $VERSION = '0.01';
 
 around _build_columns => sub {
     return {
-        'friend_id' => 1,
-        'first_name' => 2,
-        'last_name' => 3,
-        'spouse_first_name' => 4,
-        'spouse_last_name' => 5,
-        'street_address' => 6,
-        'zip' => 8,
-        'registered_voter' => 7,
+        friend_id => 1,
+        first_name => 2,
+        last_name => 3,
+        spouse_first_name => 4,
+        spouse_last_name => 5,
+        street_address => 6,
+        zip => 8,
+        registered_voter => 7,
     };
 };
 

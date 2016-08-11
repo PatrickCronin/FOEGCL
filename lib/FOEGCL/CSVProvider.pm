@@ -15,8 +15,9 @@ has datafile => (
 );
 has columns => ( is => 'ro', isa => HashRef[ Int ], builder => 1 ); # 1-based
 has skip_header => ( is => 'ro', isa => Int, builder => 1 );
+has parser_options => ( is => 'ro', isa => HashRef, builder => 1 );
+
 has _datafile_fh => ( is => 'ro', isa => FileHandle, lazy => 1, builder => 1 );
-has _parser_options => ( is => 'ro', isa => HashRef, builder => 1 );
 has _parser => (
     is => 'ro',
     isa => sub {
@@ -48,7 +49,7 @@ sub DEMOLISH {
     return;
 }
 
-sub _build__parser_options {
+sub _build_parser_options {
     return {
         binary => 1,
         auto_diag => 1,
@@ -149,7 +150,7 @@ __END__
 
 =head1 NAME
 
-FOEGCL::CSVProvider - The great new FOEGCL::CSVProvider!
+FOEGCL::CSVProvider - Iteration over rows in a CSV file.
 
 =head1 VERSION
 
@@ -157,22 +158,77 @@ Version 0.01
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
+Creates an iterator over the records in a CSV file using Text::CSV_XS.
 
     use FOEGCL::CSVProvider;
 
-    my $foo = FOEGCL::CSVProvider->new();
-    ...
+    my $csv = FOEGCL::CSVProvider->new(
+        datafile => 'datafile.csv',
+        parser_options => {
+            binary => 1,
+            auto_diag => 1,
+            diag_verbose => 1,
+            eol => qq{\n},
+            sep_char => qq{,},
+            quote_char => q{"},
+            escape_char => q{"},
+            always_quote => 1,
+            quote_space => 1,
+            quote_null => 1,
+            quote_binary => 1,
+            allow_loose_quotes => 0,
+            allow_loose_escapes => 0,
+            allow_whitespace => 0,
+            blank_is_undef => 0,
+            empty_is_undef => 0,
+            verbatim => 0,
+        },
+        columns => {
+            id => 1,
+            first_name => 2,
+            last_name => 4,
+            street_number => 6,
+            street_name => 8,
+            apartment => 9,
+            zip => 14,
+        }
+        skip_header => 0,
+    );
+    
+    while (my $record = $csv->next_record) {
+        say $record->{id} .
+            ': ' . $record->{last_name} .
+            ', ' . $record->{first_name};
+    }
 
 =head1 ATTRIBUTES
 
-=head1 SUBROUTINES/METHODS
+=head2 datafile
 
-=head2 function1
+  The filepath to the CSV. Include with call to new(), read-only thereafter.
 
-=head2 function2
+=head2 columns
+
+  A hashref of column names and numbers (1-based) to extract for each record.
+  Include with call to new(), read-only thereafter.
+
+=head2 skip_header
+
+  A boolean indicating whether or not to skip the first row of the CSV file.
+  Include with call to new(), read-only thereafter.
+
+=head2 parser_options
+
+  A hashref of options to instantiate the L<Text::CSV_XS> module with. See that
+  module for the descriptions of acceptable options. Include with call to new(),
+  read-only thereafter.
+
+=head1 METHODS
+
+=head2 next_record
+
+  Reads off the next row from the CSV file and returns a hash containing the
+  row values for the columns that were specified at object instantiation.
 
 =head1 AUTHOR
 
@@ -189,7 +245,6 @@ automatically be notified of progress on your bug as I make changes.
 You can find documentation for this module with the perldoc command.
 
     perldoc FOEGCL::CSVProvider
-
 
 You can also look for information at:
 

@@ -8,13 +8,13 @@ our $VERSION = '0.01';
 
 around _build_columns => sub {
     return {
-        'voter_registration_id' => 1,
-        'first_name' => 2,
-        'last_name' => 4,
-        'street_number' => 6,
-        'street_name' => 8,
-        'apartment' => 9,
-        'zip' => 14,
+        voter_registration_id => 1,
+        first_name => 2,
+        last_name => 4,
+        street_number => 6,
+        street_name => 8,
+        apartment => 9,
+        zip => 14,
     };
 };
 
