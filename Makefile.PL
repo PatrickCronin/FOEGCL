@@ -2,9 +2,6 @@ use 5.006;
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
-use File::ShareDir::Install;
-
-install_share dist => 'share';
 
 WriteMakefile(
     NAME             => 'FOEGCL',
@@ -32,6 +29,3 @@ WriteMakefile(
     dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean => { FILES => 'FOEGCL-*' },
 );
-
-package MY;
-use File::ShareDir::Install 'postamble';

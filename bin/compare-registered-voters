@@ -1,14 +1,16 @@
 #!/usr/bin/perl -Ilib -Iblib/lib -I../lib
 
 use Modern::Perl;
-use FOEGCL::App::CompareRegisteredVoters;
 
 {
-    package StartCompareRegisteredVoters;
+    package CompareRegisteredVoters;
     use Moo;
     use MooX::Options;
     use MooX::Types::MooseLike::Base qw( :all );
-    use File::Share qw( :all );
+    use FOEGCL::GOTV::VoterHash;
+    use FOEGCL::GOTV::VoterProvider;
+    use FOEGCL::GOTV::MembershipProvider;
+    use FOEGCL::Logger;
     use Path::Tiny;
 
     option membership_csv => (
@@ -19,7 +21,7 @@ use FOEGCL::App::CompareRegisteredVoters;
             die "Membership CSV must be a file readable to the current user."
             unless -e $_[0] && -f $_[0] && -r $_[0]
         },
-        builder => 1,
+        required => 1,
     );
 
     option voter_csv => (
@@ -30,7 +32,7 @@ use FOEGCL::App::CompareRegisteredVoters;
             die "Voter CSV must be a file readable to the current user."
             unless -e $_[0] && -f $_[0] && -r $_[0]
         },
-        builder => 1,
+        required => 1,
     );
     
     option logfile => (
@@ -44,46 +46,184 @@ use FOEGCL::App::CompareRegisteredVoters;
         builder => 1,
     );
 
-    sub _build_membership_csv {
+    has _voter_hash => ( is => 'ro', isa => Object, builder => 1 );
+    has _voter_provider => ( is => 'ro', isa => Object, lazy => 1, builder => 1 );
+    has _membership_provider => ( is => 'ro', isa => Object, lazy => 1, builder => 1 );
+    has _logger => ( is => 'ro', isa => Object, lazy => 1, builder => 1 );
+
+    sub _build__voter_hash {
+        my $self = shift;
+    
+        return FOEGCL::GOTV::VoterHash->new;
+    }
+
+    sub _build__voter_provider {
         my $self = shift;
 
-        warn "Attempting to use distribution membership CSV.\n";
-        return $self->_localize_filepath(
-            dist_file('FOEGCL', 'current-memberships.csv')
+        return FOEGCL::GOTV::VoterProvider->new(
+            datafile => $self->voter_csv
         );
     }
 
-    sub _build_voter_csv {
+    sub _build__membership_provider {
         my $self = shift;
 
-        warn "Attempting to use distribution voter CSV.\n";
-        return $self->_localize_filepath(
-            dist_file('FOEGCL', 'votexprt.csv')
+        return FOEGCL::GOTV::MembershipProvider->new(
+            datafile => $self->membership_csv
         );
     }
     
     sub _build_logfile {
         return 'compare-registered-voters.log';
     }
-
-    sub _localize_filepath {
-        my $self = shift;
-        my $filepath = shift;
-
-        return path($filepath)->relative(Path::Tiny->cwd);    
-    }
     
-    sub run {
+    sub _build__logger {
         my $self = shift;
         
-        FOEGCL::App::CompareRegisteredVoters->new(
-            voter_csv => $self->voter_csv,
-            membership_csv => $self->membership_csv,
-            logfile => $self->logfile,
-        )->run;
+        return FOEGCL::Logger->new(
+            logfile => $self->logfile
+        );
+    }
+        
+    sub run {
+        my $self = shift;
+
+        # Read voters into memory
+        $self->_voter_hash->load_from_provider($self->_voter_provider);
+
+        # For each membership, verify registered voter status
+        MEMBERSHIP:
+        while (my $membership = $self->_membership_provider->next_record) {
+            if ($membership->has_registered_voter) {
+                if ($self->_voter_hash->any_friends_match_direct(@{ $membership->registered_voter_friends })
+                    || $self->_voter_hash->any_friends_match_assisted(@{ $membership->registered_voter_friends })
+                ) {
+                    $self->_logger->log($membership->membership_id . ' Perfect.');
+                }
+                else {
+                    $self->_logger->log(
+                        $membership->membership_id . ' Check: Voter registration record not found, but expected.'
+                    );
+                }
+            }
+            else {
+                if ($self->_voter_hash->any_friends_match_direct(@{ $membership->friends })
+                    || $self->_voter_hash->any_friends_match_assisted(@{ $membership->friends })
+                ) {
+                    $self->_logger->log(
+                        $membership->membership_id . ' Check: Voter registration record found, but not expected.'
+                    );
+                }
+                else {
+                    $self->_logger->log(
+                        $membership->membership_id . ' Confirm: No voter registration record found, and none expected.'
+                    );
+                }
+            }
+        }
     }
 
     1;
 }
 
-StartCompareRegisteredVoters->new_with_options()->run();
+CompareRegisteredVoters->new_with_options()->run();
+
+__END__
+
+=head1 NAME
+
+compare-registered-voters -
+    Compare Friends' voter registration statuses against the voter registration roll
+
+=head1 SYNOPSIS
+
+compare-registered-voters [-h] [long options...]
+
+    --membership_csv=String  path/to/friends/membership/file.csv
+    --voter_csv=String       path/to/voter/file.csv
+    --logfile=String         path/to/outfile
+
+    --usage                  show a short help message
+    -h                       show a compact help message
+    --help                   show a long help message
+    --man                    show the manual
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<--usage>
+
+Prints the usage and exits.
+
+=item B<-h>
+
+Prints a short help message and exits.
+
+=item B<--help>
+
+Prints a log help message and exits.
+
+=item B<--man>
+
+Prints the manual and exits.
+
+=item B<--membership_csv>
+
+Specify the path to the Friends' Membership CSV. File should have Unix line
+endings, include a header line, and have the following column arrangement:
+
+    1. Friend ID
+    2. First Name
+    3. Last Name
+    4. Spouse First Name
+    5. Spouse Last Name
+    6. Street Address
+    7. Registered Voter (TRUE/FALSE)
+    8. ZIP Code
+    
+This file can be generated by exporting the Friends table from the MS Access
+database.
+
+=item B<--voter_csv>
+
+Specify the path to the Voter Registration CSV. File should have Unix line
+endings, include a header line, and have the following column arrangement:
+
+    1. Voter Registration ID
+    2. First Name
+    4. Last Name
+    6. Street Number
+    8. Street Name
+    9. Apartment Number
+    14. ZIP Code
+    
+This file can be obtained by asking Jill to contact someone.
+
+=item B<--logfile>
+
+Specify a path for the program to write its output. 
+
+=back
+
+=head1 DESCRIPTION
+
+Part of the FOEGCL distribution. This program will compare the voter
+registration status of all Friends against a voter registration roll, and
+recommend updates for the Friends' Membership database. Recommended changes
+should be reviewed by humans to ensure validity, and to maximize the potential
+reach of the Friends' Get Out the Vote campaign.
+
+This program looks for matches between Friends and Voters using first name,
+last name, street address and ZIP Code. In addition to standardizing the
+street addresses in accordance with USPS Publication 28 for comparison, it also
+asks the user to help it determine whether a match can be made for situations
+where names match between the Friends and Voters, but street addresses do not.
+
+This program was created to reduce the amount of manual work required to
+accomplish this task. In 2016, this program was used to check the status of 650
+memberships' voter registration statuses. About 550 were found to agree, leaving
+about 100 left for human comparison. Sometimes spelling of names or street
+addresses don't match between the two data sets, or sometimes people have moved
+away and registered to vote elsewhere.
+

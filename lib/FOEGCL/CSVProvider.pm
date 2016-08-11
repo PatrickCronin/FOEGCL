@@ -155,9 +155,6 @@ FOEGCL::CSVProvider - The great new FOEGCL::CSVProvider!
 
 Version 0.01
 
-
-
-
 =head1 SYNOPSIS
 
 Quick summary of what the module does.
@@ -169,10 +166,7 @@ Perhaps a little code snippet.
     my $foo = FOEGCL::CSVProvider->new();
     ...
 
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+=head1 ATTRIBUTES
 
 =head1 SUBROUTINES/METHODS
 
@@ -189,9 +183,6 @@ Patrick Cronin, C<< <patrick at cronin-tech.com> >>
 Please report any bugs or feature requests to C<bug-foegcl at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=FOEGCL>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
-
-
-
 
 =head1 SUPPORT
 
@@ -221,10 +212,6 @@ L<http://cpanratings.perl.org/d/FOEGCL>
 L<http://search.cpan.org/dist/FOEGCL/>
 
 =back
-
-
-=head1 ACKNOWLEDGEMENTS
-
 
 =head1 LICENSE AND COPYRIGHT
 

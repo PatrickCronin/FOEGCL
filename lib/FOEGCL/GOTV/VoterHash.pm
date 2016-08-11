@@ -1,44 +1,62 @@
 package FOEGCL::GOTV::VoterHash;
 
 use Moo;
-extends 'FOEGCL::ItemHash';
+use MooX::Types::MooseLike::Base qw( :all );
+use FOEGCL::ItemHash;
 use Geo::Address::Mail::US;
 use Geo::Address::Mail::Standardizer::USPS;
 use List::Util qw( any );
 
 our $VERSION = '0.01';
 
-around _build_hash_keys => sub {
-    return [ qw(last_name first_name zip) ];
-};
+has _item_hash => ( is => 'ro', isa => Object, builder => 1 );
 
-sub has_voter_like {
+sub _build__item_hash {
     my $self = shift;
-    my $item = shift;
-
-    my $hashed_voters = $self->retrieve_items_like_item($item);
     
-    my $item_street_address = $self->_prepare_street_address_for_comparison(
-        $item->street_address
+    return FOEGCL::ItemHash->new(
+        hash_keys => [ qw(last_name first_name zip) ],
+        case_sensitive => 0,
+    );
+}
+
+sub load_from_provider {
+    my $self = shift;
+    my $provider = shift;
+    
+    while (my $voter = $provider->next_record) {
+        $self->_item_hash->add_item($voter);
+    }
+}
+
+sub any_friends_match_direct {
+    my $self = shift;
+    my @friends = @_;
+    
+    return any {
+        $self->has_voter_like_friend($_)
+    } @friends;
+}
+
+sub has_voter_like_friend {
+    my $self = shift;
+    my $friend = shift;
+
+    my $similar_voters = $self->_item_hash->retrieve_items_like_item($friend);
+    
+    my $friend_street_address = $self->_prepare_street_address_for_comparison(
+        $friend->street_address
     );
     
     return any {
-        $item_street_address eq
+        $friend_street_address eq
             $self->_prepare_street_address_for_comparison($_->street_address)
-    } @$hashed_voters;
-}
-
-sub retrieve_voters_like {
-    my $self = shift;
-    my $item = shift;
-    
-    return $self->retrieve_items_like_item($item);
+    } @$similar_voters;
 }
 
 sub _prepare_street_address_for_comparison {
     my $self = shift;
     my $street_address = shift;
-
     
     my $address = Geo::Address::Mail::US->new(
         street => $street_address,
@@ -48,8 +66,57 @@ sub _prepare_street_address_for_comparison {
     my $res = $std->standardize($address);
     my $corr = $res->standardized_address;
 
-    return $corr->street if $self->case_sensitive;
     return lc $corr->street;
+}
+
+sub any_friends_match_assisted {
+    my $self = shift;
+    my @friends = @_;
+
+    return any {
+        $self->_friend_match_assisted($_)
+    } @friends;
+}
+
+sub _friend_match_assisted {
+    my $self = shift;
+    my $friend = shift;
+
+    my $similar_voters = $self->_item_hash->retrieve_items_like_item($friend)
+        or return;
+        
+    return 1 if
+        $self->_user_determine_voter_friend_match($friend, $similar_voters);
+        
+    return;
+}
+
+sub _user_determine_voter_friend_match {
+    my $self = shift;
+    my $friend = shift;
+    my $similar_voters = shift;
+
+    PROMPT:
+    while (1) {
+        print "\n", q{-} x 40, "\n";
+        print "No perfect match was found for the following Friend's street address:\nMatch: " . $friend->street_address . "\n";
+        print "Do any of the following voter records match?\n";
+        my $voter_num = 1;
+        foreach my $voter (@$similar_voters) {
+            print "$voter_num: " . $voter->street_address . "\n";
+            $voter_num++;
+        }
+        print "\n";
+        print "Type the number of the matching record, or leave blank for none: ";
+        my $user_input = <STDIN>;
+        chomp $user_input;
+        
+        return if $user_input eq '';
+        return $similar_voters->[ $user_input - 1 ] if
+            $user_input =~ m/^\d+$/ && $user_input <= @$similar_voters;
+        
+        print "Input not understood.\n";
+    }
 }
 
 1;

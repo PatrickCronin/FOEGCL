@@ -42,7 +42,7 @@ sub DEMOLISH {
     return;
 }
 
-sub add {
+sub log {
     my $self = shift;
     my $text = shift
         or return;

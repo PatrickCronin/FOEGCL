@@ -8,7 +8,7 @@ __END__
 
 =head1 NAME
 
-FOEGCL - The great new FOEGCL!
+FOEGCL - utilities for the Friends of the East Greenbush Community Library.
 
 =head1 VERSION
 
@@ -16,25 +16,44 @@ Version 0.01
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+This distribution provides command line tools and libraries to assist the
+Friends of the East Greenbush Community Library simplify manual tasks.
 
-Perhaps a little code snippet.
+=head2 COMMAND LINE TOOLS
 
-    use FOEGCL;
+=over 4
 
-    my $foo = FOEGCL->new();
-    ...
+=item B<compare-registered-voters>
 
-=head1 EXPORT
+compare-registered-voters - Compare Friends' voter registration statuses against
+    the voter registration roll
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+=back
 
-=head1 SUBROUTINES/METHODS
+=head2 LIBRARIES
 
-=head2 function1
+=over 4
 
-=head2 function2
+=item B<FOEGCL::CSVProvider>
+
+FOEGCL::CSVProvider - an extendable object that iterates over the rows of a CSV
+file.
+
+=item B<FOEGCL::ItemHash>
+
+FOEGCL::ItemHash - an extendable object that stores items that share similar
+characteristics.
+
+=item B<FOEGCL::Logger>
+
+FOEGCL::Logger - an extendable object that provides output logging services.
+
+=item FOEGCL::GOTV::____
+
+FOEGCL::GOTV::_____ - a set of modules that assist the compare-registered-voters
+program.
+
+=back
 
 =head1 AUTHOR
 
@@ -73,10 +92,6 @@ L<http://cpanratings.perl.org/d/FOEGCL>
 L<http://search.cpan.org/dist/FOEGCL/>
 
 =back
-
-
-=head1 ACKNOWLEDGEMENTS
-
 
 =head1 LICENSE AND COPYRIGHT
 
