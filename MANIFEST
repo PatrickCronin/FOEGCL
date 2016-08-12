@@ -4,11 +4,16 @@ lib/FOEGCL/CSVProvider.pm
 lib/FOEGCL/GOTV/Friend.pm
 lib/FOEGCL/GOTV/Membership.pm
 lib/FOEGCL/GOTV/MembershipProvider.pm
+lib/FOEGCL/GOTV/StreetAddress.pm
 lib/FOEGCL/GOTV/Voter.pm
+lib/FOEGCL/GOTV/VoterHash.pm
 lib/FOEGCL/GOTV/VoterProvider.pm
+lib/FOEGCL/ItemHash.pm
+lib/FOEGCL/Logger.pm
+lib/FOEGCL.pm
 Makefile.PL
 MANIFEST			This list of files
-README
+README.pod
 t/00-load.t
 t/manifest.t
 t/pod-coverage.t

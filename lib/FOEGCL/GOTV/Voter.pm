@@ -35,7 +35,7 @@ Version 0.01
 =head1 SYNOPSIS
 
 This module defines a Voter class, representing a Voter from the Voter
-Registration file.
+Registration Export file.
 
     use FOEGCL::GOTV::Voter;
 
@@ -78,6 +78,10 @@ Registration file.
   Stringifies portions of the object for printing.
   
   Also, this method is called when the object is used in string context.
+  
+    say $voter->stringify;
+    # OR
+    say $voter;
 
 =head1 AUTHOR
 

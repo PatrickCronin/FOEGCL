@@ -224,6 +224,8 @@ Creates an iterator over the records in a CSV file using Text::CSV_XS.
   Reads off the next row from the CSV file and returns a hash containing the
   row values for the columns that were specified at object instantiation.
 
+    my $next_record = $csv_provider->next_record;
+
 =head1 AUTHOR
 
 Patrick Cronin, C<< <patrick at cronin-tech.com> >>

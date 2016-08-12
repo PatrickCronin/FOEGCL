@@ -158,6 +158,8 @@ row.
 
   This method returns the next valid membership from the CSV as an
   L<FOEGCL::GOTV::Membership> object.
+  
+    my $next_membership = $membership_provider->next_record;
 
 =head1 AUTHOR
 

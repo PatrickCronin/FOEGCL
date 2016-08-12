@@ -42,6 +42,7 @@ sub DEMOLISH {
     return;
 }
 
+# Write some text to the logfile
 sub log {
     my $self = shift;
     my $text = shift
@@ -56,34 +57,38 @@ __END__
 
 =head1 NAME
 
-FOEGCL::Logger - The great new FOEGCL::Logger!
+FOEGCL::Logger - Output logging services.
 
 =head1 VERSION
 
 Version 0.01
 
-
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
+This module manages logging program events to an output file.
 
     use FOEGCL::Logger;
 
-    my $foo = FOEGCL::Logger->new();
-    ...
+    my $logger = FOEGCL::Logger->new(
+        logfile => 'output.log'
+    );
 
-=head1 EXPORT
+    $logger->log("Friend found as Voter!");
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+=head1 ACCESSORS
 
-=head1 SUBROUTINES/METHODS
+=head2 logfile
 
-=head2 function1
+  Specify the path the output logfile. Required. Provide with call to new(),
+  read-only thereafter.
 
-=head2 function2
+=head1 METHODS
+
+=head2 log
+
+  Write some text to the logfile.
+  
+    $logger->log($text);
 
 =head1 AUTHOR
 
@@ -95,15 +100,11 @@ Please report any bugs or feature requests to C<bug-foegcl at rt.cpan.org>, or t
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=FOEGCL>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
-
-
-
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
     perldoc FOEGCL::Logger
-
 
 You can also look for information at:
 
@@ -127,10 +128,6 @@ L<http://search.cpan.org/dist/FOEGCL/>
 
 =back
 
-
-=head1 ACKNOWLEDGEMENTS
-
-
 =head1 LICENSE AND COPYRIGHT
 
 Copyright 2016 Patrick Cronin.
@@ -148,6 +145,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see L<http://www.gnu.org/licenses/>.
 
-
 =cut
-

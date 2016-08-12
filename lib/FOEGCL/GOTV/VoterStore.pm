@@ -1,33 +1,37 @@
-package FOEGCL::GOTV::VoterHash;
+package FOEGCL::GOTV::VoterStore;
 
 use Moo;
 use MooX::Types::MooseLike::Base qw( :all );
-use FOEGCL::ItemHash;
+use FOEGCL::ItemStore;
 use FOEGCL::GOTV::StreetAddress;
 use List::Util qw( any );
 
 our $VERSION = '0.01';
 
-has _item_hash => ( is => 'ro', isa => Object, builder => 1 );
+has _item_store => ( is => 'ro', isa => Object, builder => 1 );
 
-sub _build__item_hash {
+# Create the voter store as a specifically-formatted ItemStore
+sub _build__item_store {
     my $self = shift;
     
-    return FOEGCL::ItemHash->new(
-        hash_keys => [ qw(last_name first_name zip) ],
+    return FOEGCL::ItemStore->new(
+        index_keys => [ qw(last_name first_name zip) ],
         case_sensitive => 0,
     );
 }
 
+# Fill the voter store from a FOEGCL::VoterProvider object
 sub load_from_provider {
     my $self = shift;
     my $provider = shift;
     
     while (my $voter = $provider->next_record) {
-        $self->_item_hash->add_item($voter);
+        $self->_item_store->add_item($voter);
     }
 }
 
+# Check if any provided Friends match the index keys AND street_address of any
+# already-stored Voters without user assistance.
 sub any_friends_match_direct {
     my $self = shift;
     my @friends = @_;
@@ -37,11 +41,13 @@ sub any_friends_match_direct {
     } @friends;
 }
 
+# Check if the provided Friend matches the index keys AND street_address of any
+# already-stored Voters without user assistance.
 sub has_voter_like_friend {
     my $self = shift;
     my $friend = shift;
 
-    my $similar_voters = $self->_item_hash->retrieve_items_like_item($friend);
+    my $similar_voters = $self->_item_store->retrieve_items_like_item($friend);
     
     my $friend_street_address = $self->_prepare_street_address_for_comparison(
         $friend->street_address
@@ -53,6 +59,9 @@ sub has_voter_like_friend {
     } @$similar_voters;
 }
 
+# A street address can contain many abbreviations. In order to compare two
+# street addresses to see if they're the same, "standardize" both of them
+# according to USPS Publication 28, and force lower case.
 sub _prepare_street_address_for_comparison {
     my $self = shift;
     my $street_address = shift;
@@ -60,6 +69,8 @@ sub _prepare_street_address_for_comparison {
     return lc FOEGCL::GOTV::StreetAddress->standardize($street_address);
 }
 
+# Check if any provided Friends match the index keys AND street_address of any
+# already-stored Voters with user assistance.
 sub any_friends_match_assisted {
     my $self = shift;
     my @friends = @_;
@@ -69,11 +80,13 @@ sub any_friends_match_assisted {
     } @friends;
 }
 
+# Check if the provided Friend matches the index keys AND street_address of any
+# already-stored Voters with user assistance.
 sub _friend_match_assisted {
     my $self = shift;
     my $friend = shift;
 
-    my $similar_voters = $self->_item_hash->retrieve_items_like_item($friend)
+    my $similar_voters = $self->_item_store->retrieve_items_like_item($friend)
         or return;
         
     return 1 if
@@ -82,6 +95,8 @@ sub _friend_match_assisted {
     return;
 }
 
+# Prompt the user to manually determine if any of the selected stored Voters
+# match the provided Friend.
 sub _user_determine_voter_friend_match {
     my $self = shift;
     my $friend = shift;
@@ -116,34 +131,79 @@ __END__
 
 =head1 NAME
 
-FOEGCL::GOTV::VoterHash - The great new FOEGCL::GOTV::VoterHash!
+FOEGCL::GOTV::VoterStore - Indexed Voter storage and related methods.
 
 =head1 VERSION
 
 Version 0.01
 
-
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+This module is the basis of the comparison between
+L<Friends|FOEGCL::GOTV::Friend> in the Membership Database and
+L<Voters|FOEGCL::GOTV::Voter> on the Voter Registration Roll. This module stores
+Voters according to their last name, first name and ZIP Code in a case
+insensitive way, and provides methods (both automated and those requiring user
+input) for attempting to match up Voters with Friends. 
 
-Perhaps a little code snippet.
+    use FOEGCL::GOTV::VoterStore;
 
-    use FOEGCL::GOTV::VoterHash;
+    my $voter_store = FOEGCL::GOTV::VoterStore->new();
+    
+    my $voter_provider = FOEGCL::GOTV::VoterProvider->new(
+        datafile => 'VOTEXPRT.CSV',
+    );
+    $voter_store->load_from_provider($voter_provider);
+    
+    if ($voter_store->has_voter_like_friend($friend)) {
+        say "Found Friend in Voter Registration Roll.";
+    }
+    
+    if ($voter_store->any_friends_match_direct(@friends)) {
+        say "At least one of these friends is a registered voter!";
+    }
 
-    my $foo = FOEGCL::GOTV::VoterHash->new();
-    ...
+    if ($voter_store->any_friends_match_assisted(@friends)) {
+        say "At least one of these friends is a registered voter!";
+    }
+    
+=head1 ACCESSORS
 
-=head1 EXPORT
+  This module has no accessors.
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+=head1 METHODS
 
-=head1 SUBROUTINES/METHODS
+=head2 load_from_provider
+    
+    Fill the VoterStore from a L<FOEGCL::GOTV::VoterProvider> object.
+    
+      $voter_store->load_from_provider($voter_provider);
 
-=head2 function1
+=head2 any_friends_match_direct
 
-=head2 function2
+    Checks if any of the provided Friends can be found as Voters in the
+    VoterStore. A true result indicates that at least one of them satisfies the
+    has_voter_like_friend method (see below).
+    
+      $voter_store->any_friends_match_direct(@friends);
+
+=head2 any_friends_match_assisted
+
+    Checks if any of the provided Friends can be found as Voters in the
+    VoterStore. For each Friend, the user will be prompted to manually determine
+    if any of the similar Voters' street addresses should match. You'll
+    therefore only want to use this method if the fully automated check
+    (any_friends_match_direct) fails first.
+    
+      $voter_store->any_friends_match_assisted(@friends);
+
+=head2 has_voter_like_friend
+
+    Check if a Friend can be found as a Voter in the VoterStore. A true result
+    indicates that the first name, last name, ZIP Code and standardized street
+    address all match up exactly.
+    
+      $voter_store->has_voter_like_friend($friend);
 
 =head1 AUTHOR
 
@@ -155,15 +215,11 @@ Please report any bugs or feature requests to C<bug-foegcl at rt.cpan.org>, or t
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=FOEGCL>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
-
-
-
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc FOEGCL::GOTV::VoterHash
-
+    perldoc FOEGCL::GOTV::VoterStore
 
 You can also look for information at:
 
@@ -187,10 +243,6 @@ L<http://search.cpan.org/dist/FOEGCL/>
 
 =back
 
-
-=head1 ACKNOWLEDGEMENTS
-
-
 =head1 LICENSE AND COPYRIGHT
 
 Copyright 2016 Patrick Cronin.
@@ -208,6 +260,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see L<http://www.gnu.org/licenses/>.
 
-
 =cut
-

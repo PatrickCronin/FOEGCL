@@ -96,8 +96,8 @@ Version 0.01
 =head1 SYNOPSIS
 
 This module extends from L<FOEGCL::CSVProvider>, and provides the configuration
-options specific to the Voter Registration file, which was recieve through
-assistance from the Library Director.
+options specific to the Voter Registration Export file, which was recieved
+through assistance from the Library Director.
 
 It generates a L<FOEGCL::GOTV::Voter> object for each CSV row.
 
@@ -124,6 +124,8 @@ It generates a L<FOEGCL::GOTV::Voter> object for each CSV row.
   L<FOEGCL::GOTV::Voter> object. Note that this module creates the street
   address for the voter by appending the street number, street name, and
   apartment number if any.
+  
+    my $next_voter = $voter_provider->next_record;
 
 =head1 AUTHOR
 

@@ -39,9 +39,9 @@ compare-registered-voters - Compare Friends' voter registration statuses against
 FOEGCL::CSVProvider - an extendable object that iterates over the rows of a CSV
 file.
 
-=item B<FOEGCL::ItemHash>
+=item B<FOEGCL::ItemStore>
 
-FOEGCL::ItemHash - an extendable object that stores items that share similar
+FOEGCL::ItemStore - an extendable object that stores items with a set of similar
 characteristics.
 
 =item B<FOEGCL::Logger>
@@ -110,6 +110,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see L<http://www.gnu.org/licenses/>.
 
-
 =cut
-

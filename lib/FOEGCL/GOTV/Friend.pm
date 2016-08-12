@@ -82,6 +82,10 @@ Membership Database.
   Stringifies portions of the object for printing.
   
   Also, this method is called when the object is used in string context.
+  
+    say $friend->stringify;
+    # OR
+    say $friend;
 
 =head1 AUTHOR
 

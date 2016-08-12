@@ -29,7 +29,7 @@ __END__
 
 =head1 NAME
 
-FOEGCL::GOTV::Membership - The great new FOEGCL::GOTV::Membership!
+FOEGCL::GOTV::Membership - A Membership class for Get Out the Vote
 
 =head1 VERSION
 
@@ -37,25 +37,58 @@ Version 0.01
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
+This module defines a Membership class, representing a Friend (properly, a
+membership) from the Friends' Membership Database.
 
     use FOEGCL::GOTV::Membership;
 
-    my $foo = FOEGCL::GOTV::Membership->new();
-    ...
+    my $membership = FOEGCL::GOTV::Membership->new(
+        membership_id => 92914,
+        friends => $friends, # an ArrayRef of L<FOEGCL::GOTV::Friend> objects
+    );
+    
+    say $membership->membership_id;
+    
+    if ($membership->has_registered_voter) {
+        my $registered_voter_friends = $membership->registered_voter_friends;
+        foreach my $registered_voter_friend (@$registered_voter_friends) {
+            say $registered_voter_friend->friend_id;
+        }
+    }
+    else {
+        my $friends = $membership->friends;
+        foreach my $friend (@$friends) {
+            say $friend->friend_id;
+        }
+    }
 
-=head1 EXPORT
+=head1 ACCESSORS
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+=head2 membership_id
 
-=head1 SUBROUTINES/METHODS
+  The ID of the membership from the Membership Database. Required. Include with call to new(), read-only thereafter.
 
-=head2 function1
+=head2 friends
 
-=head2 function2
+  An ArrayRef of L<FOEGCL::GOTV::Friend> objects belonging to the membership.
+
+=head1 METHODS
+
+=head2 has_registered_voter
+
+  Determine if any of the Membership's Friends are marked as registered voters
+  (according to their entry in the Membership Database).
+  
+    if ($membership->has_registered_voter) {
+        say "This membership has at least one registered voter.";
+    }
+
+=head2 registered_voter_friends
+
+  Return a ArrayRef containing the Membership's Friends which are registered
+  voters (according to their entry in the Membership Database).
+  
+    my $registered_voter_friends = $membership->registered_voter_friends;
 
 =head1 AUTHOR
 
@@ -67,13 +100,11 @@ Please report any bugs or feature requests to C<bug-foegcl at rt.cpan.org>, or t
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=FOEGCL>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
-
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
     perldoc FOEGCL::GOTV::Membership
-
 
 You can also look for information at:
 
@@ -97,10 +128,6 @@ L<http://search.cpan.org/dist/FOEGCL/>
 
 =back
 
-
-=head1 ACKNOWLEDGEMENTS
-
-
 =head1 LICENSE AND COPYRIGHT
 
 Copyright 2016 Patrick Cronin.
@@ -117,6 +144,5 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see L<http://www.gnu.org/licenses/>.
-
 
 =cut
