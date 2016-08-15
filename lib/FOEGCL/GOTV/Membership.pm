@@ -7,7 +7,7 @@ use List::Util qw( any );
 our $VERSION = '0.01';
 
 has membership_id => ( is => 'ro', isa => Str, required => 1 );
-has friends => ( is => 'ro', isa => ArrayRef[Object], required => 1 );
+has friends => ( is => 'ro', isa => ArrayRef[ InstanceOf[ 'FOEGCL::GOTV::Friend' ] ], required => 1 );
 
 sub has_registered_voter {
     my $self = shift;

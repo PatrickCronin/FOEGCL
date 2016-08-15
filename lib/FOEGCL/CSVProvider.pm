@@ -20,9 +20,7 @@ has parser_options => ( is => 'ro', isa => HashRef, builder => 1 );
 has _datafile_fh => ( is => 'ro', isa => FileHandle, lazy => 1, builder => 1 );
 has _parser => (
     is => 'ro',
-    isa => sub {
-        die "_parser must be a Text::CSV_XS object" unless ref $_[0] eq 'Text::CSV_XS'
-    },
+    isa => InstanceOf[ 'Text::CSV_XS' ],
     lazy => 1,
     builder => 1
 );
@@ -119,8 +117,11 @@ sub _build_record {
 
     my %record = ();
     foreach my $column_name (keys %{ $self->columns }) {
+        my $column_number = $self->columns->{ $column_name } - 1;
+        croak "$column_name can't be found (only " . (@$row) . " columns were found"
+            if $#$row < $column_number;
         $record{$column_name} = $self->_trim(
-            $row->[ $self->columns->{ $column_name } - 1 ]
+            $row->[ $column_number ]
         );
     }
     

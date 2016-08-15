@@ -8,7 +8,7 @@ use List::Util qw( any );
 
 our $VERSION = '0.01';
 
-has _item_store => ( is => 'ro', isa => Object, builder => 1 );
+has _item_store => ( is => 'ro', isa => InstanceOf[ 'FOEGCL::ItemStore' ], builder => 1 );
 
 # Create the voter store as a specifically-formatted ItemStore
 sub _build__item_store {

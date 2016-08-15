@@ -1,4 +1,4 @@
-#!/usr/bin/perl -Ilib -Iblib/lib -I../lib
+#!/usr/bin/perl -Ilib -I../lib
 
 use Modern::Perl;
 
@@ -7,11 +7,10 @@ use Modern::Perl;
     use Moo;
     use MooX::Options;
     use MooX::Types::MooseLike::Base qw( :all );
-    use FOEGCL::GOTV::VoterHash;
+    use FOEGCL::GOTV::VoterStore;
     use FOEGCL::GOTV::VoterProvider;
     use FOEGCL::GOTV::MembershipProvider;
     use FOEGCL::Logger;
-    use Path::Tiny;
 
     option membership_csv => (
         is => 'ro',
@@ -46,15 +45,15 @@ use Modern::Perl;
         builder => 1,
     );
 
-    has _voter_hash => ( is => 'ro', isa => Object, builder => 1 );
-    has _voter_provider => ( is => 'ro', isa => Object, lazy => 1, builder => 1 );
-    has _membership_provider => ( is => 'ro', isa => Object, lazy => 1, builder => 1 );
-    has _logger => ( is => 'ro', isa => Object, lazy => 1, builder => 1 );
+    has _voter_store => ( is => 'ro', isa => InstanceOf[ 'FOEGCL::GOTV::VoterStore' ], builder => 1 );
+    has _voter_provider => ( is => 'ro', isa => InstanceOf[ 'FOEGCL::GOTV::VoterProvider' ], lazy => 1, builder => 1 );
+    has _membership_provider => ( is => 'ro', isa => InstanceOf[ 'FOEGCL::GOTV::MembershipProvider' ], lazy => 1, builder => 1 );
+    has _logger => ( is => 'ro', isa => InstanceOf[ 'FOEGCL::Logger' ], lazy => 1, builder => 1 );
 
-    sub _build__voter_hash {
+    sub _build__voter_store {
         my $self = shift;
     
-        return FOEGCL::GOTV::VoterHash->new;
+        return FOEGCL::GOTV::VoterStore->new;
     }
 
     sub _build__voter_provider {
@@ -89,14 +88,14 @@ use Modern::Perl;
         my $self = shift;
 
         # Read voters into memory
-        $self->_voter_hash->load_from_provider($self->_voter_provider);
+        $self->_voter_store->load_from_provider($self->_voter_provider);
 
         # For each membership, verify registered voter status
         MEMBERSHIP:
         while (my $membership = $self->_membership_provider->next_record) {
             if ($membership->has_registered_voter) {
-                if ($self->_voter_hash->any_friends_match_direct(@{ $membership->registered_voter_friends })
-                    || $self->_voter_hash->any_friends_match_assisted(@{ $membership->registered_voter_friends })
+                if ($self->_voter_store->any_friends_match_direct(@{ $membership->registered_voter_friends })
+                    || $self->_voter_store->any_friends_match_assisted(@{ $membership->registered_voter_friends })
                 ) {
                     $self->_logger->log($membership->membership_id . ' Perfect.');
                 }
@@ -107,8 +106,8 @@ use Modern::Perl;
                 }
             }
             else {
-                if ($self->_voter_hash->any_friends_match_direct(@{ $membership->friends })
-                    || $self->_voter_hash->any_friends_match_assisted(@{ $membership->friends })
+                if ($self->_voter_store->any_friends_match_direct(@{ $membership->friends })
+                    || $self->_voter_store->any_friends_match_assisted(@{ $membership->friends })
                 ) {
                     $self->_logger->log(
                         $membership->membership_id . ' Check: Voter registration record found, but not expected.'

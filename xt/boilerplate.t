@@ -50,12 +50,16 @@ TODO: {
     "placeholder date/time"       => qr(Date/time)
   );
 
+  module_boilerplate_ok('lib/FOEGCL.pm');
   module_boilerplate_ok('lib/FOEGCL/CSVProvider.pm');
-  module_boilerplate_ok('lib/FOEGCL/GOTV/MembershipProvider.pm');
-  module_boilerplate_ok('lib/FOEGCL/GOTV/VoterProvider.pm');
-  module_boilerplate_ok('lib/FOEGCL/GOTV/Voter.pm');
   module_boilerplate_ok('lib/FOEGCL/GOTV/Friend.pm');
-
-
+  module_boilerplate_ok('lib/FOEGCL/GOTV/Membership.pm');
+  module_boilerplate_ok('lib/FOEGCL/GOTV/MembershipProvider.pm');
+  module_boilerplate_ok('lib/FOEGCL/GOTV/StreetAddress.pm');
+  module_boilerplate_ok('lib/FOEGCL/GOTV/Voter.pm');
+  module_boilerplate_ok('lib/FOEGCL/GOTV/VoterProvider.pm');
+  module_boilerplate_ok('lib/FOEGCL/GOTV/VoterStore.pm');
+  module_boilerplate_ok('lib/FOEGCL/ItemStore.pm');
+  module_boilerplate_ok('lib/FOEGCL/Logger.pm');
 }
 
