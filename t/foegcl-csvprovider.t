@@ -2,9 +2,11 @@ use Modern::Perl;
 
 {
     package Test::FOEGCL::CSVProvider;
+    
     BEGIN { chdir 't' if -d 't' }
-    use lib '../lib';
+    use lib '../lib', 'lib';
     use Moo;
+    extends 'FOEGCLModuleTestTemplate';
     use MooX::Types::MooseLike::Base qw( :all );
     use Test::More;
     use Test::Differences;
@@ -16,23 +18,13 @@ use Modern::Perl;
     Readonly my $TEST_DATAFILE => 'csvprovider-test-datafile.csv';
     Readonly my $TEST_INVALID_DATAFILE => 'csvprovider-invalid-test-datafile.csv';
 
-    sub run {
-        my $self = shift;
+    around _build__module_name => sub {
+        return 'FOEGCL::CSVProvider';
+    };
 
-        $self->_check_prereqs;
-        $self->_test_instantiation;
-        $self->_test_usage;
-        done_testing();
-    }
-
-    sub _check_prereqs {
+    after _check_prereqs => sub {
         my $self = shift;
     
-        # Ensure the FOEGCL::CSVProvider module can be used
-        if (! use_ok('FOEGCL::CSVProvider')) {
-            plan(skip_all => 'Failed to use the FOEGCL::CSVProvider module');
-        }
-        
         # Ensure the testing datafile exists
         if (! -e $TEST_DATAFILE) {
             plan(skip_all => "The testing datafile can't be found at " . path($TEST_DATAFILE)->absolute);
@@ -43,23 +35,47 @@ use Modern::Perl;
             && ! unlink $TEST_INVALID_DATAFILE) {
             plan(skip_all => "The invalid testing datafile shouldn't exist, and can't be deleted at " . path($TEST_INVALID_DATAFILE)->absolute);
         }
-    }
+    };
     
-    sub _test_instantiation {
+    around _test_instantiation => sub {
+        my $orig = shift;
         my $self = shift;
      
-        my $csv = new_ok( 'FOEGCL::CSVProvider' => [
+        my $csv = new_ok( $self->_module_name => [
             datafile => $self->_csvprovider_datafile,
             columns => $self->_csvprovider_columns,
             skip_header => $self->_csvprovider_skip_header,
             parser_options => $self->_csvprovider_parser_options
         ] );
-        plan(skip_all => 'Failed to instantiate the FOEGCL::CSVProvider object')
-            unless ref $csv eq 'FOEGCL::CSVProvider';   
+        plan(skip_all => "Failed to instantiate the " . $self->_module_name . " object")
+            unless ref $csv eq $self->_module_name;   
         
         $self->_test_init_attr_datafile;
         $self->_test_init_attr_columns;
-    }
+    };
+    
+    
+    around _test_usage => sub {
+        my $orig = shift;
+        my $self = shift;
+        
+        my $csv = FOEGCL::CSVProvider->new(
+            datafile => $self->_csvprovider_datafile,
+            columns => $self->_csvprovider_columns,
+            skip_header => $self->_csvprovider_skip_header,
+            parser_options => $self->_csvprovider_parser_options
+        );
+        
+        can_ok($csv, 'next_record');
+        SKIP: {
+            skip("because " . $self->_module_name . " can't next_record!")
+                if ! $csv->can('next_record');
+            
+            $self->_test_next_record;           
+            $self->_test_attr_columns;
+            $self->_test_attr_skip_header;
+        }
+    };
     
     sub _test_init_attr_datafile {
         my $self = shift;
@@ -86,27 +102,6 @@ use Modern::Perl;
                 parser_options => $self->_csvprovider_parser_options
             )
         } qr/object without columns/, 'columns is a required attribute';
-    }
-    
-    sub _test_usage {
-        my $self = shift;
-        
-        my $csv = FOEGCL::CSVProvider->new(
-            datafile => $self->_csvprovider_datafile,
-            columns => $self->_csvprovider_columns,
-            skip_header => $self->_csvprovider_skip_header,
-            parser_options => $self->_csvprovider_parser_options
-        );
-        
-        can_ok($csv, 'next_record');
-        SKIP: {
-            skip("because FOEGCL::CSVProvider can't next_record!")
-                if ! $csv->can('next_record');
-            
-            $self->_test_next_record;           
-            $self->_test_attr_columns;
-            $self->_test_attr_skip_header;
-        }
     }
     
     sub _test_next_record {

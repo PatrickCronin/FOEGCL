@@ -2,9 +2,11 @@ use Modern::Perl;
 
 {
     package Test::FOEGCL::GOTV::MembershipProvider;
+    
     BEGIN { chdir 't' if -d 't' }
-    use lib '../lib';
+    use lib '../lib', 'lib';
     use Moo;
+    extends 'FOEGCLModuleTestTemplate';
     use MooX::Types::MooseLike::Base qw( :all );
     use Test::More;
     use Test::Differences;
@@ -17,48 +19,39 @@ use Modern::Perl;
         is => 'rw',
         isa => InstanceOf[ 'FOEGCL::GOTV::MembershipProvider' ],
     );
+
+    around _build__module_name => sub {
+        return 'FOEGCL::GOTV::MembershipProvider';
+    };
     
     sub _build__datafile {
         return $TEST_MEMBERSHIP_DATAFILE;
     }
-
-    sub run {
-        my $self = shift;
-        
-        $self->_check_prereqs;
-        $self->_test_instantiation;
-        $self->_test_usage;
-        
-        done_testing();
-    }
     
-    sub _check_prereqs {
+    after _check_prereqs => sub {
         my $self = shift;
-    
-        # Ensure the FOEGCL::GOTV::MembershipProvider module can be used
-        if (! use_ok('FOEGCL::GOTV::MembershipProvider')) {
-            plan(skip_all => 'Failed to use the FOEGCL::GOTV::MembershipProvider module');
-        }
         
         # Ensure the testing datafile exists
         if (! -e $TEST_MEMBERSHIP_DATAFILE) {
             plan(skip_all => "The testing datafile can't be found at " . path($TEST_MEMBERSHIP_DATAFILE)->absolute);
         }
-    }
+    };
     
-    sub _test_instantiation {
+    around _test_instantiation => sub {
+        my $orig = shift;
         my $self = shift;
         
-        my $membership_provider = new_ok( 'FOEGCL::GOTV::MembershipProvider' => [
+        my $membership_provider = new_ok( $self->_module_name => [
             datafile => $TEST_MEMBERSHIP_DATAFILE,
         ] );
-        plan(skip_all => 'Failed to instantiate the FOEGCL::GOTV::MembershipProvider object')
-            unless ref $membership_provider eq 'FOEGCL::GOTV::MembershipProvider';
+        plan(skip_all => "Failed to instantiate the " . $self->_module_name . " object")
+            unless ref $membership_provider eq $self->_module_name;
             
         $self->_membership_provider($membership_provider);
-    }
+    };
     
-    sub _test_usage {
+    around _test_usage => sub {
+        my $orig = shift;
         my $self = shift;
         
         $self->_test_first_membership;
@@ -69,7 +62,7 @@ use Modern::Perl;
             $valid_record_count++;
         }
         is($valid_record_count, 100, 'found correct number of valid memberships');
-    }
+    };
     
     sub _test_first_membership {
         my $self = shift;

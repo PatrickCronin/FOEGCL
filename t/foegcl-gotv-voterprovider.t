@@ -2,9 +2,11 @@ use Modern::Perl;
 
 {
     package Test::FOEGCL::GOTV::VoterProvider;
+    
     BEGIN { chdir 't' if -d 't' }
-    use lib '../lib';
+    use lib '../lib', 'lib';
     use Moo;
+    extends 'FOEGCLModuleTestTemplate';    
     use MooX::Types::MooseLike::Base qw( :all );
     use Test::More;
     use Test::Differences;
@@ -18,47 +20,38 @@ use Modern::Perl;
         isa => InstanceOf[ 'FOEGCL::GOTV::VoterProvider' ],
     );
     
+    around _build__module_name => sub {
+        return 'FOEGCL::GOTV::VoterProvider';
+    };
+    
     sub _build__datafile {
         return $TEST_VOTER_DATAFILE;
     }
-
-    sub run {
-        my $self = shift;
-        
-        $self->_check_prereqs;
-        $self->_test_instantiation;
-        $self->_test_usage;
-        
-        done_testing();
-    }
     
-    sub _check_prereqs {
+    after _check_prereqs => sub {
         my $self = shift;
-    
-        # Ensure the FOEGCL::GOTV::VoterProvider module can be used
-        if (! use_ok('FOEGCL::GOTV::VoterProvider')) {
-            plan(skip_all => 'Failed to use the FOEGCL::GOTV::VoterProvider module');
-        }
         
         # Ensure the testing datafile exists
         if (! -e $TEST_VOTER_DATAFILE) {
             plan(skip_all => "The testing datafile can't be found at " . path($TEST_VOTER_DATAFILE)->absolute);
         }
-    }
+    };
     
-    sub _test_instantiation {
+    around _test_instantiation => sub {
+        my $orig = shift;
         my $self = shift;
         
-        my $voter_provider = new_ok( 'FOEGCL::GOTV::VoterProvider' => [
+        my $voter_provider = new_ok( $self->_module_name => [
             datafile => $TEST_VOTER_DATAFILE,
         ] );
-        plan(skip_all => 'Failed to instantiate the FOEGCL::GOTV::VoterProvider object')
+        plan(skip_all => 'Failed to instantiate the ' . $self->_module_name . ' object')
             unless ref $voter_provider eq 'FOEGCL::GOTV::VoterProvider';
             
         $self->_voter_provider($voter_provider);
-    }
+    };
     
-    sub _test_usage {
+    around _test_usage => sub {
+        my $orig = shift;
         my $self = shift;
         
         $self->_test_first_voter;
@@ -69,7 +62,7 @@ use Modern::Perl;
             $record_count++;
         }
         is($record_count, 100, 'found correct number of voters');
-    }
+    };
     
     sub _test_first_voter {
         my $self = shift;

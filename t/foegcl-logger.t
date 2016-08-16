@@ -2,9 +2,11 @@ use Modern::Perl;
 
 {
     package Test::FOEGCL::Logger;
+    
     BEGIN { chdir 't' if -d 't' }
-    use lib '../lib';
+    use lib '../lib', 'lib';
     use Moo;
+    extends 'FOEGCLModuleTestTemplate';
     use MooX::Types::MooseLike::Base qw( :all );
     use Test::More;
     use Test::Differences;
@@ -19,6 +21,10 @@ use Modern::Perl;
         isa => InstanceOf[ 'FOEGCL::Logger' ],
         clearer => 1,
     );
+    
+    around _build__module_name => sub {
+        return 'FOEGCL::Logger';
+    };
     
     sub _build__logfile {
         return $LOGFILE_NAME;
