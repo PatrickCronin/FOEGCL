@@ -88,7 +88,9 @@ use Modern::Perl;
         my $self = shift;
 
         # Read voters into memory
-        $self->_voter_store->load_from_provider($self->_voter_provider);
+        while (my $voter = $self->_voter_provider->next_record) {
+            $self->_voter_store->add_voter($voter)
+        }
 
         # For each membership, verify registered voter status
         MEMBERSHIP:

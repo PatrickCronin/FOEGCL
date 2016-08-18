@@ -11,66 +11,58 @@ use Modern::Perl;
     use Test::More;
     use Readonly;
     
-    Readonly::Array my @TEST_FRIENDS => (
-        {
-            friend_id => 288492,
-            first_name => 'Herbert',
-            last_name => 'Cornelia',
-            street_address => '418 Broadway',
-            zip => '12207',
-            registered_voter => 0,
-        },
-        {
-            friend_id => 48201,
-            first_name => 'Ella',
-            last_name => 'Fitzgerald',
-            street_address => '9271 132nd Street',
-            zip => 10013,
-            registered_voter => 1,
-        }
-    );
-    
-    around _build__module_name => sub {
+    has _friends => ( is => 'ro', isa => ArrayRef[ HashRef ], builder => 1 );
+
+    sub _build__friends {
+        my $self = shift;
+        
+        my @row_hrefs = $self->_read_data_csv(qw(
+            friend_id
+            first_name
+            last_name
+            street_address
+            zip
+            registered_voter
+        ));
+        
+        return \@row_hrefs;
+    }
+
+    around _build__module_under_test => sub {
         return 'FOEGCL::GOTV::Friend';
     };
-    
-    around _test_instantiation => sub {
+       
+    around _test_methods => sub {
         my $orig = shift;
         my $self = shift;
         
-        my $friend = new_ok( $self->_module_name => [ %{ $TEST_FRIENDS[0] } ] );
-        plan(skip_all => "Failed to instantiate the " . $self->_module_name . " object")
-            unless ref $friend eq $self->_module_name;
+        subtest $self->_module_under_test . '->stringify' => sub {
+            $self->_test_method_stringify
+        };
     };
     
-    around _test_usage => sub {
+    around _default_object_args => sub {
         my $orig = shift;
         my $self = shift;
         
-        foreach my $friend (@TEST_FRIENDS) {
-            $self->_test_friend($friend);
-        }
-        
-        $self->_test_stringify;
+        return %{ $self->_friends->[0] };
     };
     
-    sub _test_friend {
+    sub _test_method_stringify {
         my $self = shift;
-        my $friend_fields = shift;
-        
-        my $friend = FOEGCL::GOTV::Friend->new(%$friend_fields);
-        foreach my $field (keys %$friend_fields) {
-            is($friend->$field, $friend_fields->{$field}, "$field attribute sets and gets");
-        }
-    }
-    
-    sub _test_stringify {
-        my $self = shift;
-     
-        my $friend = FOEGCL::GOTV::Friend->new(%{ $TEST_FRIENDS[0] });
+
+        my $friend = $self->_module_under_test->new( $self->_default_object_args );
         my $stringified = can_ok($friend, 'stringify');
+        plan (skip_all => $self->_module_under_test . " can't stringify!") if
+            ! $friend->can('stringify');
+            
         ok(length($stringified) > 0, 'stringifies ok');
     }
 }
 
 Test::FOEGCL::GOTV::Friend->new->run;
+
+# friend_id, first_name, last_name, street_address, zip, registered_voter
+__DATA__
+288492,Herbert,Cornelia,418 Broadway,12207,0
+48201,Ella,Fitzgerald,9271 132 Street',10013,1

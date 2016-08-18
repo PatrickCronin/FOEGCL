@@ -53,7 +53,7 @@ around next_record => sub {
     my $orig = shift;
     my $self = shift;
     
-    my $record = $self->$orig()
+    my $record = $self->$orig
         or return;
         
     return $self->_voter_from_record($record);

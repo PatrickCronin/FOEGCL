@@ -20,7 +20,7 @@ use Modern::Perl;
         isa => InstanceOf[ 'FOEGCL::GOTV::MembershipProvider' ],
     );
 
-    around _build__module_name => sub {
+    around _build__module_under_test => sub {
         return 'FOEGCL::GOTV::MembershipProvider';
     };
     
@@ -41,18 +41,33 @@ use Modern::Perl;
         my $orig = shift;
         my $self = shift;
         
-        my $membership_provider = new_ok( $self->_module_name => [
-            datafile => $TEST_MEMBERSHIP_DATAFILE,
-        ] );
-        plan(skip_all => "Failed to instantiate the " . $self->_module_name . " object")
-            unless ref $membership_provider eq $self->_module_name;
-            
-        $self->_membership_provider($membership_provider);
+        $self->_membership_provider( $self->$orig );
     };
     
-    around _test_usage => sub {
+    around _test_methods => sub {
         my $orig = shift;
         my $self = shift;
+        
+        subtest $self->_module_under_test . '->next_record' => sub {
+            $self->_test_method_next_record
+        };
+    };
+    
+    around _default_object_args => sub {
+        my $orig = shift;
+        my $self = shift;
+        
+        return (
+            datafile => $self->_datafile
+        );
+    };
+    
+    sub _test_method_next_record {
+        my $self = shift;
+        
+        can_ok($self->_membership_provider, 'next_record');
+        plan (skip_all => $self->_module_under_test . " can't next_record!") if
+            ! $self->_membership_provider->can('next_record');
         
         $self->_test_first_membership;
         $self->_test_second_membership;        
@@ -62,7 +77,7 @@ use Modern::Perl;
             $valid_record_count++;
         }
         is($valid_record_count, 100, 'found correct number of valid memberships');
-    };
+    }
     
     sub _test_first_membership {
         my $self = shift;
@@ -77,12 +92,7 @@ use Modern::Perl;
 
         eq_or_diff(
             {
-                friend_id => $friends->[0]->friend_id,
-                first_name => $friends->[0]->first_name,
-                last_name => $friends->[0]->last_name,
-                street_address => $friends->[0]->street_address,
-                zip => $friends->[0]->zip,
-                registered_voter => $friends->[0]->registered_voter
+                $self->_extract_attrs($friends->[0], $self->_friend_attrs)
             },
             {
                 friend_id => '1',
@@ -112,12 +122,7 @@ use Modern::Perl;
         
         eq_or_diff(
             {
-                friend_id => $friends->[0]->friend_id,
-                first_name => $friends->[0]->first_name,
-                last_name => $friends->[0]->last_name,
-                street_address => $friends->[0]->street_address,
-                zip => $friends->[0]->zip,
-                registered_voter => $friends->[0]->registered_voter
+                $self->_extract_attrs($friends->[0], $self->_friend_attrs)
             },
             {
                 friend_id => '2',
@@ -132,12 +137,7 @@ use Modern::Perl;
         
         eq_or_diff(
             {
-                friend_id => $friends->[1]->friend_id,            
-                first_name => $friends->[1]->first_name,
-                last_name => $friends->[1]->last_name,
-                street_address => $friends->[1]->street_address,
-                zip => $friends->[1]->zip,
-                registered_voter => $friends->[1]->registered_voter
+                $self->_extract_attrs($friends->[1], $self->_friend_attrs)
             },
             {
                 friend_id => '2',
@@ -150,7 +150,10 @@ use Modern::Perl;
             'second membership second friend extracted correctly'
         );
     }
-
+    
+    sub _friend_attrs {
+        return qw ( friend_id first_name last_name street_address zip registered_voter );
+    }
 }
 
 Test::FOEGCL::GOTV::MembershipProvider->new->run;

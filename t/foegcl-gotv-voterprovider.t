@@ -20,7 +20,7 @@ use Modern::Perl;
         isa => InstanceOf[ 'FOEGCL::GOTV::VoterProvider' ],
     );
     
-    around _build__module_name => sub {
+    around _build__module_under_test => sub {
         return 'FOEGCL::GOTV::VoterProvider';
     };
     
@@ -41,18 +41,33 @@ use Modern::Perl;
         my $orig = shift;
         my $self = shift;
         
-        my $voter_provider = new_ok( $self->_module_name => [
-            datafile => $TEST_VOTER_DATAFILE,
-        ] );
-        plan(skip_all => 'Failed to instantiate the ' . $self->_module_name . ' object')
-            unless ref $voter_provider eq 'FOEGCL::GOTV::VoterProvider';
-            
-        $self->_voter_provider($voter_provider);
+        $self->_voter_provider( $self->$orig );
     };
     
-    around _test_usage => sub {
+    around _test_methods => sub {
         my $orig = shift;
         my $self = shift;
+        
+        subtest $self->_module_under_test . '->next_record' => sub {
+            $self->_test_method_next_record
+        };
+    };
+    
+    around _default_object_args => sub {
+        my $orig = shift;
+        my $self = shift;
+        
+        return (
+            datafile => $self->_datafile
+        );
+    };
+    
+    sub _test_method_next_record {
+        my $self = shift;
+        
+        can_ok($self->_voter_provider, 'next_record');
+        plan (skip_all => $self->_module_under_test . " can't next_record!") if
+            ! $self->_voter_provider->can('next_record');
         
         $self->_test_first_voter;
         $self->_test_second_voter;        
@@ -61,8 +76,8 @@ use Modern::Perl;
         while ($self->_voter_provider->next_record) {
             $record_count++;
         }
-        is($record_count, 100, 'found correct number of voters');
-    };
+        is($record_count, 100, 'found correct number of voters');        
+    }
     
     sub _test_first_voter {
         my $self = shift;
@@ -72,11 +87,7 @@ use Modern::Perl;
 
         eq_or_diff(
             {
-                voter_registration_id => $first_voter->voter_registration_id,
-                first_name => $first_voter->first_name,
-                last_name => $first_voter->last_name,
-                street_address => $first_voter->street_address,
-                zip => $first_voter->zip,
+                $self->_extract_attrs( $first_voter, $self->_voter_attrs )
             },
             {
                 voter_registration_id => '342581988',
@@ -98,11 +109,7 @@ use Modern::Perl;
 
         eq_or_diff(
             {
-                voter_registration_id => $second_voter->voter_registration_id,
-                first_name => $second_voter->first_name,
-                last_name => $second_voter->last_name,
-                street_address => $second_voter->street_address,
-                zip => $second_voter->zip,
+                $self->_extract_attrs( $second_voter, $self->_voter_attrs )
             },
             {
                 voter_registration_id => '1052372292',
@@ -114,6 +121,10 @@ use Modern::Perl;
             'second voter extracted correctly'
         );
 
+    }
+    
+    sub _voter_attrs {
+        return qw( voter_registration_id first_name last_name street_address zip );
     }
 
 }

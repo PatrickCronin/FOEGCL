@@ -10,66 +10,57 @@ use Modern::Perl;
     use MooX::Types::MooseLike::Base qw( :all );
     use Test::More;
     use Test::Exception;
-    use Readonly;
     
-    Readonly::Array my @TEST_VOTERS => (
-        {
-            voter_registration_id => 30015588441,
-            first_name => 'Kimya',
-            last_name => 'Dawson',
-            street_address => '9 Charlotte Pl',
-            zip => '28183',
-        },
-        {
-            voter_registration_id => 1978022514,
-            first_name => 'Phyllis',
-            last_name => 'Stoffels',
-            street_address => '42 Main St.',
-            zip => '44442',
-        }
-    );
+    has _voters => ( is => 'ro', isa => ArrayRef[ HashRef ], builder => 1 );
     
-    around _build__module_name => sub {
+    around _build__module_under_test => sub {
         return 'FOEGCL::GOTV::Voter';
     };
     
-    around _test_instantiation => sub {
-        my $orig = shift;
+    sub _build__voters {
         my $self = shift;
         
-        my $friend = new_ok( $self->_module_name => [ %{ $TEST_VOTERS[0] } ] );
-        plan(skip_all => "Failed to instantiate the " . $self->_module_name . " object")
-            unless ref $friend eq $self->_module_name;
-    };
-    
-    around _test_usage => sub {
-        my $orig = shift;
-        my $self = shift;
+        my @row_hrefs = $self->_read_data_csv(qw(
+            voter_registration_id
+            first_name
+            last_name
+            street_address
+            zip
+        ));
         
-        foreach my $voter (@TEST_VOTERS) {
-            $self->_test_voter($voter);
-        }
-        
-        $self->_test_stringify;
-    };
-    
-    sub _test_voter {
-        my $self = shift;
-        my $voter_fields = shift;
-        
-        my $voter = FOEGCL::GOTV::Voter->new(%$voter_fields);
-        foreach my $field (keys %$voter_fields) {
-            is($voter->$field, $voter_fields->{$field}, "$field attribute sets and gets");
-        }
+        return \@row_hrefs;
     }
     
-    sub _test_stringify {
+    around _test_methods => sub {
+        my $orig = shift;
         my $self = shift;
-     
-        my $voter = FOEGCL::GOTV::Voter->new(%{ $TEST_VOTERS[0] });
+        
+        subtest $self->_module_under_test . '->stringify' => sub {
+            $self->_test_method_stringify;
+        }
+    };
+    
+    around _default_object_args => sub {
+        my $orig = shift;
+        my $self = shift;
+        
+        return %{ $self->_voters->[0] };
+    };
+    
+    sub _test_method_stringify {
+        my $self = shift;
+
+        my $voter = $self->_module_under_test->new( $self->_default_object_args );
         my $stringified = can_ok($voter, 'stringify');
+        plan (skip_all => $self->_module_under_test . " can't stringify!") if
+            ! $voter->can('stringify');
         ok(length($stringified) > 0, 'stringifies ok');
     }
 }
 
 Test::FOEGCL::GOTV::Voter->new->run;
+
+# voter_registration_id, first_name, last_name, street_address, zip
+__DATA__
+30015588441,Kimya,Dawson,9 Charlotte Pl,28183
+1978022514,Phyllis,Stoffels,42 Main St.',44442

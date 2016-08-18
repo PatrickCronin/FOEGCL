@@ -20,14 +20,12 @@ sub _build__item_store {
     );
 }
 
-# Fill the voter store from a FOEGCL::VoterProvider object
-sub load_from_provider {
+# Add a voter to the voter store
+sub add_voter {
     my $self = shift;
-    my $provider = shift;
+    my $voter = shift;
     
-    while (my $voter = $provider->next_record) {
-        $self->_item_store->add_item($voter);
-    }
+    $self->_item_store->add_item($voter);
 }
 
 # Check if any provided Friends match the index keys AND street_address of any
@@ -89,10 +87,7 @@ sub _friend_match_assisted {
     my $similar_voters = $self->_item_store->retrieve_items_like_item($friend)
         or return;
         
-    return 1 if
-        $self->_user_determine_voter_friend_match($friend, $similar_voters);
-        
-    return;
+    return $self->_user_determine_voter_friend_match($friend, $similar_voters);
 }
 
 # Prompt the user to manually determine if any of the selected stored Voters

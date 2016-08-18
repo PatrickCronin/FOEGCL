@@ -22,7 +22,7 @@ use Modern::Perl;
         clearer => 1,
     );
     
-    around _build__module_name => sub {
+    around _build__module_under_test => sub {
         return 'FOEGCL::Logger';
     };
     
@@ -38,24 +38,9 @@ use Modern::Perl;
                or die "Failed to delete test logfile at " . $self->_logfile . ": $OS_ERROR";
         }
     }
-    
-    sub run {
-        my $self = shift;
 
-        $self->_check_prereqs;
-        $self->_test_instantiation;
-        $self->_test_usage;
-        
-        done_testing();
-    }
-
-    sub _check_prereqs {
+    after _check_prereqs  => sub {
         my $self = shift;
-    
-        # Ensure the FOEGCL::Logger module can be used
-        if (! use_ok('FOEGCL::Logger')) {
-            plan(skip_all => 'Failed to use the FOEGCL::Logger module');
-        }
         
         # Delete $self->_logfile if it exists
         if (-e $self->_logfile) {
@@ -66,61 +51,64 @@ use Modern::Perl;
             plan(skip_all => "could not delete " . $self->_logfile . " for testing: $OS_ERROR")
                 unless unlink $self->_logfile;
         }
-    }
+    };
     
-    sub _test_instantiation {
+    around _test_instantiation => sub {
+        my $orig = shift;
         my $self = shift;
         
-        my $logger_object = new_ok( 'FOEGCL::Logger' => [ 'logfile', $self->_logfile ] );
-        plan(skip_all => 'Failed to instantiate the FOEGCL::Logger object')
-            unless ref $logger_object eq 'FOEGCL::Logger';
-            
-        $self->_logger($logger_object);
-    }
+        $self->_logger( $self->$orig );
+    };
     
-    sub _test_usage {
+    around _test_methods => sub {
+        my $orig = shift;
+        my $self = shift;
+      
+        subtest $self->_module_under_test . '->log' => sub {
+            $self->_test_method_log  
+        };
+    };
+    
+    around _default_object_args => sub {
+        my $orig = shift;
         my $self = shift;
         
-        $self->_test_log;
-    }
+        return (
+            logfile => $self->_logfile
+        );
+    };
     
-    sub _test_log {
+    sub _test_method_log {
         my $self = shift;
 
         can_ok($self->_logger, 'log');
+        plan(skip_all => $self->_module_under_test . " can't log!") if
+            ! $self->_logger->can('log');
 
-        SKIP: {
-            skip("because FOEGCL::Logger can't log!", 1) if
-                ! $self->_logger->can('log');
-
-            my @events = (
-                'Event 1: Random string A.',
-                'Event 2: Random string B.',
-                'Event 3: Random string C.',
-                'Event 4: Random string D.',
-                'Event 5: Random string E.',
-            );
-        
-            # logfile hasn't been used - should not exist
-            is(-e $self->_logfile, undef, "logfile not created before use");
-        
-            # Add an item to the log, and then the logfile should exist
-            ok($self->_logger->log($events[0]), "calling log");
-            is(-e $self->_logfile, 1, "logfile created on first use");
-        
-            # Add remaining items to the log
-            foreach my $event (@events[1..$#events]) {
-                ok($self->_logger->log($event), "calling log");
-            }
-        
-            $self->_clear_logger;
-            my $logfile_contents = $self->_read_logfile_contents;
-            eq_or_diff(
-                $logfile_contents,
-                (join qq{\n}, @events) . "\n",
-                'logfile has correct contents'
-            );
+        my @events = (
+            'Event 1: Random string A.',
+            'Event 2: Random string B.',
+            'Event 3: Random string C.',
+            'Event 4: Random string D.',
+            'Event 5: Random string E.',
+        );
+    
+        # Add an item to the log, and then the logfile should exist
+        ok($self->_logger->log($events[0]), "logging $events[0]");
+    
+        # Add remaining items to the log
+        foreach my $event (@events[1..$#events]) {
+            ok($self->_logger->log($event), "logging $event");
         }
+    
+        # Close log (to avoid buffering issues), and ensure contents
+        $self->_clear_logger;
+        my $logfile_contents = $self->_read_logfile_contents;
+        eq_or_diff(
+            $logfile_contents,
+            (join qq{\n}, @events) . "\n",
+            'logfile has correct contents'
+        );
     }
     
     sub _read_logfile_contents {
