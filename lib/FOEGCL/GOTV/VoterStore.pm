@@ -121,7 +121,7 @@ sub _user_determine_voter_friend_match {
         print "\n",
           'Type the number of the matching record, or leave blank for none: '
           or croak "Failed to print prompt: $OS_ERROR";
-        my $user_input = <>;
+        my $user_input = <STDIN>;
         chomp $user_input;
 
         return if $user_input eq q{};
