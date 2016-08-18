@@ -14,37 +14,37 @@ our $VERSION = '0.01';
 # Specify parser options for a CSV exported from MS Access on Windows.
 around _build_parser_options => sub {
     return {
-        binary => 1,
-        auto_diag => 1,
-        diag_verbose => 1,
-        eol => qq{\r\n},
-        sep_char => qq{,},
-        quote_char => q{"},
-        escape_char => q{"},
-        always_quote => 1,
-        quote_space => 1,
-        quote_null => 1,
-        quote_binary => 1,
-        allow_loose_quotes => 0,
+        binary              => 1,
+        auto_diag           => 1,
+        diag_verbose        => 1,
+        eol                 => qq{\r\n},
+        sep_char            => q{,},
+        quote_char          => q{"},
+        escape_char         => q{"},
+        always_quote        => 1,
+        quote_space         => 1,
+        quote_null          => 1,
+        quote_binary        => 1,
+        allow_loose_quotes  => 0,
         allow_loose_escapes => 0,
-        allow_whitespace => 0,
-        blank_is_undef => 0,
-        empty_is_undef => 0,
-        verbatim => 0,
+        allow_whitespace    => 0,
+        blank_is_undef      => 0,
+        empty_is_undef      => 0,
+        verbatim            => 0,
     };
 };
 
 # Specify columns for the Friends table export
 around _build_columns => sub {
     return {
-        friend_id => 1,
-        first_name => 2,
-        last_name => 3,
+        friend_id         => 1,
+        first_name        => 2,
+        last_name         => 3,
         spouse_first_name => 4,
-        spouse_last_name => 5,
-        street_address => 6,
-        zip => 8,
-        registered_voter => 7,
+        spouse_last_name  => 5,
+        street_address    => 6,
+        zip               => 8,
+        registered_voter  => 7,
     };
 };
 
@@ -58,67 +58,68 @@ around _build_skip_header => sub {
 around next_record => sub {
     my $orig = shift;
     my $self = shift;
-    
-    my $record;
+
+    my $row_record;
     do {
-        $record = $self->$orig()
-            or return;
-    }
-    while ! $self->_record_is_valid($record);
-    
+        $row_record = $self->$orig()
+          or return;
+    } while !$self->_record_is_valid($row_record);
+
     my @friends = ();
-    push @friends, $self->_friend_from_record($record);
-    push @friends, $self->_friend_from_record($record, $SPOUSE_RECORD) if
-        defined $record->{ spouse_first_name }
-        && defined $record->{ spouse_last_name };
-    
+    push @friends, $self->_friend_from_record($row_record);
+    push @friends, $self->_friend_from_record( $row_record, $SPOUSE_RECORD )
+      if defined $row_record->{spouse_first_name}
+      && defined $row_record->{spouse_last_name};
+
     return FOEGCL::GOTV::Membership->new(
         membership_id => $friends[0]->friend_id,
-        friends => \@friends
+        friends       => \@friends
     );
 };
 
 # Test the validity of a CSV row's values
 sub _record_is_valid {
-    my $self = shift;
-    my $record = shift;
-    
-    return 1 if 
-        defined $record->{ friend_id }
-        && defined $record->{ first_name }
-        && defined $record->{ last_name }
-        && defined $record->{ street_address }
-        && defined $record->{ zip };
-        
+    my $self       = shift;
+    my $row_record = shift;
+
+    return 1
+      if defined $row_record->{friend_id}
+      && defined $row_record->{first_name}
+      && defined $row_record->{last_name}
+      && defined $row_record->{street_address}
+      && defined $row_record->{zip};
+
     return 0;
 }
 
 # Build an FOEGCL::GOTV::Friend object from a CSV record
 sub _friend_from_record {
-    my $self = shift;
-    my $record = shift;
+    my $self          = shift;
+    my $row_record    = shift;
     my $spouse_record = shift;
-    
+
     # Set the base fields
     my %friend = (
-        friend_id => $record->{ friend_id },
-        street_address => FOEGCL::GOTV::StreetAddress->clean(
-            $record->{ street_address }
-        ),
-        zip => $record->{ zip },
-        registered_voter => ($record->{ registered_voter } eq 'TRUE' ? 1 : 0),
+        friend_id => $row_record->{friend_id},
+        street_address =>
+          FOEGCL::GOTV::StreetAddress->clean( $row_record->{street_address} ),
+        zip => $row_record->{zip},
+        registered_voter =>
+          ( $row_record->{registered_voter} eq 'TRUE' ? 1 : 0 ),
     );
-    
+
     # Add the name fields, either the primary the spouse
-    @friend{qw( first_name last_name )} = 
-        (! defined $spouse_record || ! $spouse_record) ?
-            @{ $record }{qw( first_name last_name )}
-            : @{ $record }{qw( spouse_first_name spouse_last_name )};
-    
+    @friend{qw( first_name last_name )} =
+      ( !defined $spouse_record || !$spouse_record )
+      ? @{$row_record}{qw( first_name last_name )}
+      : @{$row_record}{qw( spouse_first_name spouse_last_name )};
+
     return FOEGCL::GOTV::Friend->new(%friend);
 }
 
 1;
+
+__END__
 
 =head1 NAME
 
@@ -130,12 +131,12 @@ Version 0.01
 
 =head1 SYNOPSIS
 
-This module extends from L<FOEGCL::CSVProvider>, and provides the configuration
-options specific to the Membership CSV file, which is created by exporting the
-Friends table in the Access Database to Text.
+This module extends from L<FOEGCL::CSVProvider|FOEGCL::CSVProvider>, and
+provides the configuration options specific to the Membership CSV file, which is
+created by exporting the Friends table in the Access Database to Text.
 
-It automatically creates a L<FOEGCL::GOTV::Membership> object for each valid CSV
-row.
+It automatically creates a L<FOEGCL::GOTV::Membership|FOEGCL::GOTV::Membership>
+object for each valid CSV row.
 
     use FOEGCL::GOTV::MembershipProvider;
 

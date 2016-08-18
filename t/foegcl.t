@@ -1,5 +1,7 @@
+#!perl
+
 use Modern::Perl;
 use Test::More;
-    
-pass "No tests necessary.";
+
+pass q{No tests necessary.};
 done_testing();

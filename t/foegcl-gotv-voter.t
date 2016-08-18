@@ -1,8 +1,11 @@
+#!perl
+
 use Modern::Perl;
 
 {
+
     package Test::FOEGCL::GOTV::Voter;
-    
+
     BEGIN { chdir 't' if -d 't' }
     use lib '../lib', 'lib';
     use Moo;
@@ -10,52 +13,59 @@ use Modern::Perl;
     use MooX::Types::MooseLike::Base qw( :all );
     use Test::More;
     use Test::Exception;
-    
-    has _voters => ( is => 'ro', isa => ArrayRef[ HashRef ], builder => 1 );
-    
+
+    has _voters => ( is => 'ro', isa => ArrayRef [HashRef], builder => 1 );
+
     around _build__module_under_test => sub {
         return 'FOEGCL::GOTV::Voter';
     };
-    
+
     sub _build__voters {
         my $self = shift;
-        
-        my @row_hrefs = $self->_read_data_csv(qw(
-            voter_registration_id
-            first_name
-            last_name
-            street_address
-            zip
-        ));
-        
+
+        my @row_hrefs = $self->_read_data_csv(
+            qw(
+              voter_registration_id
+              first_name
+              last_name
+              street_address
+              zip
+              )
+        );
+
         return \@row_hrefs;
     }
-    
+
     around _test_methods => sub {
         my $orig = shift;
         my $self = shift;
-        
+
         subtest $self->_module_under_test . '->stringify' => sub {
             $self->_test_method_stringify;
-        }
+          }
     };
-    
+
     around _default_object_args => sub {
         my $orig = shift;
         my $self = shift;
-        
+
         return %{ $self->_voters->[0] };
     };
-    
+
     sub _test_method_stringify {
         my $self = shift;
 
-        my $voter = $self->_module_under_test->new( $self->_default_object_args );
-        my $stringified = can_ok($voter, 'stringify');
-        plan (skip_all => $self->_module_under_test . " can't stringify!") if
-            ! $voter->can('stringify');
-        ok(length($stringified) > 0, 'stringifies ok');
+        my $voter =
+          $self->_module_under_test->new( $self->_default_object_args );
+        my $stringified = can_ok( $voter, 'stringify' );
+        plan( skip_all => $self->_module_under_test . q{ can't stringify!} )
+          if !$voter->can('stringify');
+        ok( length($stringified) > 0, 'stringifies ok' );
+
+        return;
     }
+
+    1;
 }
 
 Test::FOEGCL::GOTV::Voter->new->run;

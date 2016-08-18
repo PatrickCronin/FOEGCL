@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Test::More;
 
-plan tests => 7;
+plan tests => 13;
 
 sub not_in_file_ok {
     my ($filename, %regex) = @_;
@@ -38,28 +38,23 @@ sub module_boilerplate_ok {
     );
 }
 
-TODO: {
-  local $TODO = "Need to replace the boilerplate text";
+not_in_file_ok('README.pod' =>
+"The README is used..."       => qr/The README is used/,
+"'version information here'"  => qr/to provide version information/,
+);
 
-  not_in_file_ok(README =>
-    "The README is used..."       => qr/The README is used/,
-    "'version information here'"  => qr/to provide version information/,
-  );
+not_in_file_ok(Changes =>
+"placeholder date/time"       => qr(Date/time)
+);
 
-  not_in_file_ok(Changes =>
-    "placeholder date/time"       => qr(Date/time)
-  );
-
-  module_boilerplate_ok('lib/FOEGCL.pm');
-  module_boilerplate_ok('lib/FOEGCL/CSVProvider.pm');
-  module_boilerplate_ok('lib/FOEGCL/GOTV/Friend.pm');
-  module_boilerplate_ok('lib/FOEGCL/GOTV/Membership.pm');
-  module_boilerplate_ok('lib/FOEGCL/GOTV/MembershipProvider.pm');
-  module_boilerplate_ok('lib/FOEGCL/GOTV/StreetAddress.pm');
-  module_boilerplate_ok('lib/FOEGCL/GOTV/Voter.pm');
-  module_boilerplate_ok('lib/FOEGCL/GOTV/VoterProvider.pm');
-  module_boilerplate_ok('lib/FOEGCL/GOTV/VoterStore.pm');
-  module_boilerplate_ok('lib/FOEGCL/ItemStore.pm');
-  module_boilerplate_ok('lib/FOEGCL/Logger.pm');
-}
-
+module_boilerplate_ok('lib/FOEGCL/CSVProvider.pm');
+module_boilerplate_ok('lib/FOEGCL/GOTV/Friend.pm');
+module_boilerplate_ok('lib/FOEGCL/GOTV/Membership.pm');
+module_boilerplate_ok('lib/FOEGCL/GOTV/MembershipProvider.pm');
+module_boilerplate_ok('lib/FOEGCL/GOTV/StreetAddress.pm');
+module_boilerplate_ok('lib/FOEGCL/GOTV/Voter.pm');
+module_boilerplate_ok('lib/FOEGCL/GOTV/VoterProvider.pm');
+module_boilerplate_ok('lib/FOEGCL/GOTV/VoterStore.pm');
+module_boilerplate_ok('lib/FOEGCL/ItemStore.pm');
+module_boilerplate_ok('lib/FOEGCL/Logger.pm');
+module_boilerplate_ok('lib/FOEGCL.pm');

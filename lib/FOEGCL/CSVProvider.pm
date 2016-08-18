@@ -9,41 +9,44 @@ use English qw( -no_match_vars );
 our $VERSION = '0.01';
 
 has datafile => (
-    is => 'ro',
+    is       => 'ro',
     required => 1,
-    isa => sub { die "datafile must be a readable file" unless -e $_[0] && -f $_[0] && -r $_[0]; },
+    isa      => sub {
+        ## no critic (ProhibitUselessTopic)
+        croak 'datafile must be a readable file'
+          unless -e $_[0] && -f $_[0] && -r $_[0];
+    },
 );
-has columns => ( is => 'ro', isa => HashRef[ Int ], builder => 1 ); # 1-based
-has skip_header => ( is => 'ro', isa => Int, builder => 1 );
+has columns => ( is => 'ro', isa => HashRef [Int], builder => 1 );    # 1-based
+has skip_header    => ( is => 'ro', isa => Int,     builder => 1 );
 has parser_options => ( is => 'ro', isa => HashRef, builder => 1 );
 
 has _datafile_fh => ( is => 'ro', isa => FileHandle, lazy => 1, builder => 1 );
 has _parser => (
-    is => 'ro',
-    isa => InstanceOf[ 'Text::CSV_XS' ],
-    lazy => 1,
-    builder => 1
+    is      => 'ro',
+    isa     => InstanceOf ['Text::CSV_XS'],
+    lazy    => 1,
+    builder => 1,
 );
 
 # Ensure we have at least 1 column defined
 sub BUILD {
-    my $self = shift;
-    my $args = shift;
-    
-    if (scalar keys %{ $self->{columns} } == 0) {
-        croak "Can't create a " . __PACKAGE__ . " object without columns!";
+    my ( $self, $args ) = @_;
+
+    if ( scalar keys %{ $self->{columns} } == 0 ) {
+        croak q{Can't create a } . __PACKAGE__ . q{object without columns!};
     }
 }
 
 # Close the _datafile_fh if it's open
 sub DEMOLISH {
-    my $self = shift;
-    
-    if (defined $self->_datafile_fh) {
+    my ($self) = @_;
+
+    if ( defined $self->_datafile_fh ) {
         close $self->_datafile_fh
-            or carp "Failed to close datafile: $OS_ERROR";
+          or carp "Failed to close datafile: $OS_ERROR";
     }
-    
+
     return;
 }
 
@@ -51,23 +54,23 @@ sub DEMOLISH {
 # implementation.
 sub _build_parser_options {
     return {
-        binary => 1,
-        auto_diag => 1,
-        diag_verbose => 1,
-        eol => qq{\n},
-        sep_char => qq{,},
-        quote_char => q{"},
-        escape_char => q{"},
-        always_quote => 1,
-        quote_space => 1,
-        quote_null => 1,
-        quote_binary => 1,
-        allow_loose_quotes => 0,
+        binary              => 1,
+        auto_diag           => 1,
+        diag_verbose        => 1,
+        eol                 => qq{\n},
+        sep_char            => q{,},
+        quote_char          => q{"},
+        escape_char         => q{"},
+        always_quote        => 1,
+        quote_space         => 1,
+        quote_null          => 1,
+        quote_binary        => 1,
+        allow_loose_quotes  => 0,
         allow_loose_escapes => 0,
-        allow_whitespace => 0,
-        blank_is_undef => 0,
-        empty_is_undef => 0,
-        verbatim => 0,
+        allow_whitespace    => 0,
+        blank_is_undef      => 0,
+        empty_is_undef      => 0,
+        verbatim            => 0,
     };
 }
 
@@ -83,59 +86,60 @@ sub _build_skip_header {
 
 # Prepare the datafile for reading
 sub _build__datafile_fh {
-    my $self = shift;
-    
+    my ($self) = @_;
+
     open my $fh, '<:encoding(utf8)', $self->datafile
-        or croak 'Failed to open the datafile at ' . $self->datafile . ": $OS_ERROR";
-        
+      or croak 'Failed to open the datafile at '
+      . $self->datafile
+      . ": $OS_ERROR";
+
     <$fh> if $self->skip_header;
-    
+
     return $fh;
-};
+}
 
 # Instantiate the Text::CSV_XS object
 sub _build__parser {
-    my $self = shift;
-    
-    return Text::CSV_XS->new($self->parser_options);
+    my ($self) = @_;
+
+    return Text::CSV_XS->new( $self->parser_options );
 }
 
 # Get the next row from the CSV and return it as a hashref
 sub next_record {
-    my $self = shift;
+    my ($self) = @_;
 
-    my $row = $self->_parser->getline($self->_datafile_fh);
-    return if ! defined $row;
-    
+    my $row = $self->_parser->getline( $self->_datafile_fh );
+    return if !defined $row;
+
     return $self->_build_record($row);
 }
 
 # Build a hash of the relevant columns' values from a row
 sub _build_record {
-    my $self = shift;
-    my $row = shift;
+    my ( $self, $row ) = @_;
 
-    my %record = ();
-    foreach my $column_name (keys %{ $self->columns }) {
-        my $column_number = $self->columns->{ $column_name } - 1;
-        croak "$column_name can't be found (only " . (@$row) . " columns were found"
-            if $#$row < $column_number;
-        $record{$column_name} = $self->_trim(
-            $row->[ $column_number ]
-        );
+    my %row_record = ();
+    foreach my $column_name ( keys %{ $self->columns } ) {
+        my $column_number = $self->columns->{$column_name} - 1;
+        croak "$column_name can't be found (only "
+          . @{$row}
+          . ' columns were found'
+          if @{$row} - 1 < $column_number;
+        $row_record{$column_name} = $self->_trim( $row->[$column_number] );
     }
-    
-    return \%record;
+
+    return \%row_record;
 }
 
 # Remove whitespace before and after text
 sub _trim {
     my $self = shift;
     my $text = shift
-        or return;
-    
-    $text =~ s/^\s+|\s+$//g;
-    
+      or return;
+
+    $text =~ s/ ^\s+ | \s+$ //mgx;    ## no critic (RequireDotMatchAnything)
+
     return $text;
 }
 

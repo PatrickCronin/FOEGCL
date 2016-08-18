@@ -5,119 +5,137 @@ use MooX::Types::MooseLike::Base qw( :all );
 use FOEGCL::ItemStore;
 use FOEGCL::GOTV::StreetAddress;
 use List::Util qw( any );
+use English qw( -no_match_vars );
+use Carp qw ( croak );
+use Readonly;
+
+Readonly my $NUM_PRE_PROMPT_DASHES => 40;
 
 our $VERSION = '0.01';
 
-has _item_store => ( is => 'ro', isa => InstanceOf[ 'FOEGCL::ItemStore' ], builder => 1 );
+has _item_store => (
+    is      => 'ro',
+    isa     => InstanceOf ['FOEGCL::ItemStore'],
+    builder => 1,
+);
 
 # Create the voter store as a specifically-formatted ItemStore
 sub _build__item_store {
-    my $self = shift;
-    
+    my ($self) = @_;
+
     return FOEGCL::ItemStore->new(
-        index_keys => [ qw(last_name first_name zip) ],
+        index_keys     => [qw(last_name first_name zip)],
         case_sensitive => 0,
     );
 }
 
 # Add a voter to the voter store
 sub add_voter {
-    my $self = shift;
-    my $voter = shift;
-    
+    my ( $self, $voter ) = @_;
+
     $self->_item_store->add_item($voter);
+
+    return $self;
 }
 
 # Check if any provided Friends match the index keys AND street_address of any
 # already-stored Voters without user assistance.
 sub any_friends_match_direct {
-    my $self = shift;
-    my @friends = @_;
-    
+    my ( $self, @friends ) = @_;
+
     return any {
         $self->has_voter_like_friend($_)
-    } @friends;
+    }
+    @friends;
 }
 
 # Check if the provided Friend matches the index keys AND street_address of any
 # already-stored Voters without user assistance.
 sub has_voter_like_friend {
-    my $self = shift;
-    my $friend = shift;
+    my ( $self, $friend ) = @_;
 
     my $similar_voters = $self->_item_store->retrieve_items_like_item($friend);
-    
-    my $friend_street_address = $self->_prepare_street_address_for_comparison(
-        $friend->street_address
-    );
-    
+
+    my $friend_street_address =
+      $self->_prepare_street_address_for_comparison( $friend->street_address );
+
     return any {
         $friend_street_address eq
-            $self->_prepare_street_address_for_comparison($_->street_address)
-    } @$similar_voters;
+          $self->_prepare_street_address_for_comparison( $_->street_address )
+    }
+    @{$similar_voters};
 }
 
 # A street address can contain many abbreviations. In order to compare two
 # street addresses to see if they're the same, "standardize" both of them
 # according to USPS Publication 28, and force lower case.
 sub _prepare_street_address_for_comparison {
-    my $self = shift;
-    my $street_address = shift;
-    
+    my ( $self, $street_address ) = @_;
+
     return lc FOEGCL::GOTV::StreetAddress->standardize($street_address);
 }
 
 # Check if any provided Friends match the index keys AND street_address of any
 # already-stored Voters with user assistance.
 sub any_friends_match_assisted {
-    my $self = shift;
-    my @friends = @_;
+    my ( $self, @friends ) = @_;
 
     return any {
         $self->_friend_match_assisted($_)
-    } @friends;
+    }
+    @friends;
 }
 
 # Check if the provided Friend matches the index keys AND street_address of any
 # already-stored Voters with user assistance.
 sub _friend_match_assisted {
-    my $self = shift;
-    my $friend = shift;
+    my ( $self, $friend ) = @_;
 
     my $similar_voters = $self->_item_store->retrieve_items_like_item($friend)
-        or return;
-        
-    return $self->_user_determine_voter_friend_match($friend, $similar_voters);
+      or return;
+
+    return $self->_user_determine_voter_friend_match( $friend,
+        $similar_voters );
 }
 
 # Prompt the user to manually determine if any of the selected stored Voters
 # match the provided Friend.
 sub _user_determine_voter_friend_match {
-    my $self = shift;
-    my $friend = shift;
-    my $similar_voters = shift;
+    my ( $self, $friend, $similar_voters ) = @_;
 
-    PROMPT:
+  PROMPT:
     while (1) {
-        print "\n", q{-} x 40, "\n";
-        print "No perfect match was found for the following Friend's street address:\nMatch: " . $friend->street_address . "\n";
-        print "Do any of the following voter records match?\n";
+        print "\n",
+          q{-} x $NUM_PRE_PROMPT_DASHES, "\n",
+"No perfect match was found for the following Friend's street address:\nMatch: ",
+          $friend->street_address, "\n",
+          "Do any of the following voter records match?\n"
+          or croak "Failed to print prompt: $OS_ERROR";
+
         my $voter_num = 1;
-        foreach my $voter (@$similar_voters) {
-            print "$voter_num: " . $voter->street_address . "\n";
+        foreach my $voter ( @{$similar_voters} ) {
+            print "$voter_num: ", $voter->street_address, "\n"
+              or croak "Failed to print voter number: $OS_ERROR";
             $voter_num++;
         }
-        print "\n";
-        print "Type the number of the matching record, or leave blank for none: ";
-        my $user_input = <STDIN>;
+        print "\n",
+          'Type the number of the matching record, or leave blank for none: '
+          or croak "Failed to print prompt: $OS_ERROR";
+        my $user_input = <>;
         chomp $user_input;
-        
-        return if $user_input eq '';
+
+        return if $user_input eq q{};
         return $similar_voters->[ $user_input - 1 ] if
-            $user_input =~ m/^\d+$/ && $user_input <= @$similar_voters;
-        
-        print "Input not understood.\n";
+          ## no critic (RequireDotMatchAnything, RequireLineBoundaryMatching)
+          $user_input =~ m/ ^ \d+ $ /x
+          ## use critic
+          && $user_input <= @{$similar_voters};
+
+        print "Input not understood.\n"
+          or croak "Failed to print message about understanding: $OS_ERROR";
     }
+
+    return 'THIS SHOULD NEVER EVER HAPPEN. JUST FOR YOU, PERLCRITIC!';
 }
 
 1;
@@ -148,7 +166,9 @@ input) for attempting to match up Voters with Friends.
     my $voter_provider = FOEGCL::GOTV::VoterProvider->new(
         datafile => 'VOTEXPRT.CSV',
     );
-    $voter_store->load_from_provider($voter_provider);
+    while (my $voter = $voter_provider->next_record) {
+        $voter_store->add_voter($voter);
+    }
     
     if ($voter_store->has_voter_like_friend($friend)) {
         say "Found Friend in Voter Registration Roll.";
@@ -168,11 +188,11 @@ input) for attempting to match up Voters with Friends.
 
 =head1 METHODS
 
-=head2 load_from_provider
+=head2 add_voter
     
-    Fill the VoterStore from a L<FOEGCL::GOTV::VoterProvider> object.
+    Add a L<Voter|FOEGCL::GOTV::Voter> to the VoterStore.
     
-      $voter_store->load_from_provider($voter_provider);
+      $voter_store->add_voter($voter);
 
 =head2 any_friends_match_direct
 

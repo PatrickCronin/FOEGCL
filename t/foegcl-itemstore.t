@@ -1,8 +1,11 @@
+#!perl
+
 use Modern::Perl;
 
 {
+
     package Test::FOEGCL::ItemStore;
-    
+
     BEGIN { chdir 't' if -d 't' }
     use lib '../lib', 'lib';
     use Moo;
@@ -13,138 +16,166 @@ use Modern::Perl;
     use Test::Exception;
     use Test::Deep;
 
-    has _cars => ( is => 'ro', isa => ArrayRef[ InstanceOf[ 'Car' ] ], builder => 1 );
-    has _item_store => ( is => 'rw', isa => InstanceOf[ 'FOEGCL::ItemStore' ] );
-    
+    has _cars =>
+      ( is => 'ro', isa => ArrayRef [ InstanceOf ['Car'] ], builder => 1 );
+    has _item_store => ( is => 'rw', isa => InstanceOf ['FOEGCL::ItemStore'] );
+
     around _build__module_under_test => sub {
         return 'FOEGCL::ItemStore';
     };
-    
+
     sub _build__cars {
         my $self = shift;
-        
-        return [
-            map { bless $_, 'Car' } ($self->_read_data_csv( $self->_car_attrs ))
-        ];
+
+        return [ map { bless $_, 'Car' }
+              ( $self->_read_data_csv( $self->_car_attrs ) ) ];
     }
 
     around _test_instantiation => sub {
         my $orig = shift;
         my $self = shift;
-        
+
         $self->_item_store( $self->$orig );
     };
-    
+
     around _test_methods => sub {
         my $orig = shift;
         my $self = shift;
-        
+
         subtest $self->_module_under_test . '->add_item' => sub {
-            $self->_test_method_add_item
-        };
-        
-        subtest $self->_module_under_test . '->retrieve_items_like_item' => sub {
-            $self->_test_method_retrieve_items_like_item
+            $self->_test_method_add_item;
         };
 
-        subtest $self->_module_under_test . '->has_item_like_item_matching_str' => sub {
-            $self->_test_method_has_item_like_item_matching_str
-        };        
+        subtest $self->_module_under_test
+          . '->retrieve_items_like_item' => sub {
+            $self->_test_method_retrieve_items_like_item;
+          };
+
+        subtest $self->_module_under_test
+          . '->has_item_like_item_matching_str' => sub {
+            $self->_test_method_has_item_like_item_matching_str;
+          };
     };
-    
+
     around _default_object_args => sub {
         return (
-            index_keys => [ qw( year make model ) ],
+            index_keys     => [qw( year make model )],
             case_sensitive => 0,
         );
     };
-    
+
     sub _test_method_add_item {
         my $self = shift;
-        
-        plan(skip_all => $self->_module_under_test . " can't add_item!") if
-            ! $self->_item_store->can('add_item');
-        
-        foreach my $car (@{ $self->_cars }) {
+
+        plan( skip_all => $self->_module_under_test . q{ can't add_item!} )
+          if !$self->_item_store->can('add_item');
+
+        foreach my $car ( @{ $self->_cars } ) {
             lives_ok { $self->_item_store->add_item($car) } 'added car';
-                        
+
             # Test storage hierarchy
             ok(
+                ## no critic (ProtectPrivateSubs)
                 ref $self->_item_store->_item_store eq 'HASH'
-                && exists $self->_item_store->_item_store->{ $car->year }
-                && ref $self->_item_store->_item_store->{ $car->year } eq 'HASH'
-                && exists $self->_item_store->_item_store->{ $car->year }->{ lc $car->make }
-                && ref $self->_item_store->_item_store->{ $car->year }->{ lc $car->make } eq 'HASH'
-                && exists $self->_item_store->_item_store->{ $car->year }->{ lc $car->make }->{ lc $car->model }
-                && ref $self->_item_store->_item_store->{ $car->year }->{ lc $car->make }->{ lc $car->model } eq 'ARRAY',
+                  && exists $self->_item_store->_item_store->{ $car->year }
+                  && ref $self->_item_store->_item_store->{ $car->year } eq
+                  'HASH'
+                  && exists $self->_item_store->_item_store->{ $car->year }
+                  ->{ lc $car->make }
+                  && ref $self->_item_store->_item_store->{ $car->year }
+                  ->{ lc $car->make } eq 'HASH'
+                  && exists $self->_item_store->_item_store->{ $car->year }
+                  ->{ lc $car->make }->{ lc $car->model }
+                  && ref $self->_item_store->_item_store->{ $car->year }
+                  ->{ lc $car->make }->{ lc $car->model } eq 'ARRAY',
                 'storage allocated correctly'
+                  ## use critic
             );
-            
+
             # Test that actual item can be found
             cmp_deeply(
-                $self->_item_store->_item_store->{ $car->year }->{ lc $car->make }->{ lc $car->model },
+                ## no critic (ProtectPrivateSubs)
+                $self->_item_store->_item_store->{ $car->year }
+                  ->{ lc $car->make }->{ lc $car->model },
+                ## use critic
                 superbagof($car),
                 'car found in storage'
             );
         }
+
+        return;
     }
-    
+
     sub _test_method_retrieve_items_like_item {
         my $self = shift;
-        
+
         my $car = Car->new(
-            year => 2015,
-            make => 'Subaru',
+            year  => 2015,
+            make  => 'Subaru',
             model => 'Outback',
         );
-        
-        my $like_cars = $self->_item_store->retrieve_items_like_item( $car );
+
+        my $like_cars = $self->_item_store->retrieve_items_like_item($car);
         eq_or_diff(
             $like_cars,
-            $self->_item_store->_item_store->{ $car->year }->{ lc $car->make }->{ lc $car->model },
+            ## no critic (ProtectPrivateSubs)
+            $self->_item_store->_item_store->{ $car->year }->{ lc $car->make }
+              ->{ lc $car->model },
+            ## use critic
             'correctly retrieve items like item'
         );
+
+        return;
     }
-    
+
     sub _test_method_has_item_like_item_matching_str {
         my $self = shift;
-        
+
         my $yes_car = Car->new(
-            year => 2015,
-            make => 'Subaru',
+            year  => 2015,
+            make  => 'Subaru',
             model => 'Outback',
-            trim => '3.6R Limited',
+            trim  => '3.6R Limited',
         );
         ok(
-            $self->_item_store->has_item_like_item_matching_str($yes_car, 'trim'),
+            $self->_item_store->has_item_like_item_matching_str(
+                $yes_car, 'trim'
+            ),
             'find matching item'
         );
-        
+
         my $no_car = Car->new(
-            year => 2015,
-            make => 'Subaru',
+            year  => 2015,
+            make  => 'Subaru',
             model => 'Outback',
-            trim => '3.0T Limited',        
+            trim  => '3.0T Limited',
         );
         ok(
-            ! $self->_item_store->has_item_like_item_matching_str($no_car, 'trim'),
+            !$self->_item_store->has_item_like_item_matching_str(
+                $no_car, 'trim'
+            ),
             'identify when no items match'
         );
-            
+
+        return;
     }
-    
+
     sub _car_attrs {
         return qw( year make model trim );
     }
-    
-    package Car;
+
+    1;
+
+    package Car;    ## no critic (ProhibitMultiplePackages)
     use Moo;
     use MooX::Types::MooseLike::Base qw( :all );
-    
-    has year => ( is => 'ro', isa => Str, requried => 1);
-    has make => ( is => 'ro', isa => Str, requried => 1);
-    has model => ( is => 'ro', isa => Str, requried => 1);
-    has trim => ( is => 'ro', isa => Str, requried => 1);
+
+    has year  => ( is => 'ro', isa => Str, requried => 1 );
+    has make  => ( is => 'ro', isa => Str, requried => 1 );
+    has model => ( is => 'ro', isa => Str, requried => 1 );
+    has trim  => ( is => 'ro', isa => Str, requried => 1 );
+
+    1;
 }
 
 Test::FOEGCL::ItemStore->new->run;

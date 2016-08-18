@@ -7,17 +7,19 @@ use overload '""' => 'stringify';
 our $VERSION = '0.01';
 
 has voter_registration_id => ( is => 'ro', isa => Str, required => 1 );
-has first_name => ( is => 'ro', isa => Str, required => 1 );
-has last_name => ( is => 'ro', isa => Str, required => 1 );
-has street_address => ( is => 'ro', isa => Str, required => 1 );
-has zip => ( is => 'ro', isa => Str, required => 1 );
+has first_name            => ( is => 'ro', isa => Str, required => 1 );
+has last_name             => ( is => 'ro', isa => Str, required => 1 );
+has street_address        => ( is => 'ro', isa => Str, required => 1 );
+has zip                   => ( is => 'ro', isa => Str, required => 1 );
 
 sub stringify {
     my $self = shift;
-    
-    return $self->first_name . ' ' . $self->last_name .  "\n" .
-        $self->street_address . "\n" .
-        $self->zip;
+
+    return
+        $self->first_name . q{ }
+      . $self->last_name . "\n"
+      . $self->street_address . "\n"
+      . $self->zip;
 }
 
 1;

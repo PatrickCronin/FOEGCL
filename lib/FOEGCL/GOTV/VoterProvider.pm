@@ -10,23 +10,23 @@ our $VERSION = '0.01';
 # Specify parser options for the received voter registration file
 around _build_parser_options => sub {
     return {
-        binary => 1,
-        auto_diag => 1,
-        diag_verbose => 1,
-        eol => qq{\r\n},
-        sep_char => qq{,},
-        quote_char => q{"},
-        escape_char => q{"},
-        always_quote => 1,
-        quote_space => 1,
-        quote_null => 1,
-        quote_binary => 1,
-        allow_loose_quotes => 0,
+        binary              => 1,
+        auto_diag           => 1,
+        diag_verbose        => 1,
+        eol                 => qq{\r\n},
+        sep_char            => q{,},
+        quote_char          => q{"},
+        escape_char         => q{"},
+        always_quote        => 1,
+        quote_space         => 1,
+        quote_null          => 1,
+        quote_binary        => 1,
+        allow_loose_quotes  => 0,
         allow_loose_escapes => 0,
-        allow_whitespace => 0,
-        blank_is_undef => 0,
-        empty_is_undef => 0,
-        verbatim => 0,
+        allow_whitespace    => 0,
+        blank_is_undef      => 0,
+        empty_is_undef      => 0,
+        verbatim            => 0,
     };
 };
 
@@ -34,12 +34,12 @@ around _build_parser_options => sub {
 around _build_columns => sub {
     return {
         voter_registration_id => 1,
-        first_name => 2,
-        last_name => 4,
-        street_number => 6,
-        street_name => 8,
-        apartment => 9,
-        zip => 14,
+        first_name            => 2,
+        last_name             => 4,
+        street_number         => 6,
+        street_name           => 8,
+        apartment             => 9,
+        zip                   => 14,
     };
 };
 
@@ -52,32 +52,32 @@ around _build_skip_header => sub {
 around next_record => sub {
     my $orig = shift;
     my $self = shift;
-    
-    my $record = $self->$orig
-        or return;
-        
-    return $self->_voter_from_record($record);
+
+    my $row_record = $self->$orig
+      or return;
+
+    return $self->_voter_from_record($row_record);
 };
 
 # Build an FOEGCL::GOTV::Voter object from a CSV record
 sub _voter_from_record {
-    my $self = shift;
-    my $record = shift;
-    
+    my $self       = shift;
+    my $row_record = shift;
+
     my %voter = (
-        voter_registration_id => $record->{ voter_registration_id },
-        first_name => $record->{ first_name },
-        last_name => $record->{ last_name },
-        street_address => FOEGCL::GOTV::StreetAddress->clean(
-            join ' ', grep {
-                defined $_
-            } (
-                $record->{ street_number }, $record->{ street_name }, $record->{ apartment }
+        voter_registration_id => $row_record->{voter_registration_id},
+        first_name            => $row_record->{first_name},
+        last_name             => $row_record->{last_name},
+        street_address        => FOEGCL::GOTV::StreetAddress->clean(
+            join q{ },
+            grep { defined } (
+                $row_record->{street_number}, $row_record->{street_name},
+                $row_record->{apartment}
             )
         ),
-        zip => $record->{ zip },
+        zip => $row_record->{zip},
     );
-    
+
     return FOEGCL::GOTV::Voter->new(%voter);
 }
 
@@ -95,11 +95,11 @@ Version 0.01
 
 =head1 SYNOPSIS
 
-This module extends from L<FOEGCL::CSVProvider>, and provides the configuration
+This module extends from L<FOEGCL::CSVProvider|FOEGCL::CSVProvider>, and provides the configuration
 options specific to the Voter Registration Export file, which was recieved
 through assistance from the Library Director.
 
-It generates a L<FOEGCL::GOTV::Voter> object for each CSV row.
+It generates a L<FOEGCL::GOTV::Voter|FOEGCL::GOTV::Voter> object for each CSV row.
 
     use FOEGCL::GOTV::VoterProvider;
 
@@ -113,7 +113,7 @@ It generates a L<FOEGCL::GOTV::Voter> object for each CSV row.
 
 =head1 ATTRIBUTES
 
-  This module extends from L<FOEGCL::CSVProvider> and adds no attributes of its
+  This module extends from L<FOEGCL::CSVProvider|FOEGCL::CSVProvider> and adds no attributes of its
   own.
 
 =head1 METHODS
@@ -121,7 +121,7 @@ It generates a L<FOEGCL::GOTV::Voter> object for each CSV row.
 =head2 next_record
 
   This method returns the next voter from the CSV as an
-  L<FOEGCL::GOTV::Voter> object. Note that this module creates the street
+  L<FOEGCL::GOTV::Voter|FOEGCL::GOTV::Voter> object. Note that this module creates the street
   address for the voter by appending the street number, street name, and
   apartment number if any.
   

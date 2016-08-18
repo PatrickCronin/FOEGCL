@@ -7,7 +7,7 @@ use List::Util qw( any );
 
 our $VERSION = '0.01';
 
-has index_keys => ( is => 'ro', isa => ArrayRef[ Str ], builder => 1 );
+has index_keys => ( is => 'ro', isa => ArrayRef [Str], builder => 1 );
 has case_sensitive => ( is => 'ro', isa => Int, default => 0 );
 has _item_store => ( is => 'ro', isa => HashRef, default => sub { {} } );
 
@@ -19,9 +19,9 @@ sub _build_index_keys {
 # Verify we have at least 1 index key
 sub BUILD {
     my $self = shift;
-    
-    if (scalar keys $self->index_keys == 0) {
-        croak "index_keys must contain at least one key";;
+
+    if ( scalar keys $self->index_keys == 0 ) {
+        croak 'index_keys must contain at least one key';
     }
 }
 
@@ -30,38 +30,41 @@ sub add_item {
     my $self = shift;
     my $item = shift;
 
-    my $store_node = $self->_vivify_store_node_at_index($self->_index_keys($item));
-    push @$store_node, $item;
+    my $store_node =
+      $self->_vivify_store_node_at_index( $self->_index_keys($item) );
+    push @{$store_node}, $item;
+
+    return $self;
 }
 
 # Return all stored items with the same index keys as the provided item
 sub retrieve_items_like_item {
     my $self = shift;
     my $item = shift;
-    
-    return $self->_store_node_at_index(
-        $self->_index_keys($item)
-    );
+
+    return $self->_store_node_at_index( $self->_index_keys($item) );
 }
 
 # Return all stored items with the same index keys as the provided item AND
 # that match (string-like) on the specified field as well.
 sub has_item_like_item_matching_str {
-    my $self = shift;
-    my $item = shift;
+    my $self           = shift;
+    my $item           = shift;
     my $field_to_match = shift;
-    
+
     my $like_items = $self->retrieve_items_like_item($item);
-    
-    if ($self->case_sensitive) {
+
+    if ( $self->case_sensitive ) {
         return any {
             $item->$field_to_match eq $_->$field_to_match
-        } @$like_items;
+        }
+        @{$like_items};
     }
     else {
         return any {
             lc $item->$field_to_match eq lc $_->$field_to_match
-        } @$like_items;    
+        }
+        @{$like_items};
     }
 }
 
@@ -69,29 +72,28 @@ sub has_item_like_item_matching_str {
 sub _index_keys {
     my $self = shift;
     my $item = shift;
-    
+
     my @index_keys = ();
-    foreach my $index_key (@{ $self->index_keys }) {
+    foreach my $index_key ( @{ $self->index_keys } ) {
         push @index_keys, $item->$index_key;
     }
-    
-    @index_keys = map { lc $_ } @index_keys
-        if ! $self->case_sensitive;
+
+    @index_keys = map { lc } @index_keys
+      if !$self->case_sensitive;
 
     return @index_keys;
 }
 
 # Create a node in the item store at a given set of index keys
 sub _vivify_store_node_at_index {
-    my $self = shift;
-    my @index_keys = @_;
+    my ( $self, @index_keys ) = @_;
 
     my $store_node = $self->_item_store;
-    while (my $index_key = shift @index_keys) {
-        if (! exists $store_node->{ $index_key }) {
-            $store_node->{ $index_key } = (@index_keys > 0 ? {} : []);
+    while ( my $index_key = shift @index_keys ) {
+        if ( !exists $store_node->{$index_key} ) {
+            $store_node->{$index_key} = ( @index_keys > 0 ? {} : [] );
         }
-        $store_node = $store_node->{ $index_key };
+        $store_node = $store_node->{$index_key};
     }
 
     return $store_node;
@@ -99,15 +101,14 @@ sub _vivify_store_node_at_index {
 
 # Get the ArrayRef of items at a particular index in the item store.
 sub _store_node_at_index {
-    my $self = shift;
-    my @index_keys = @_;
-    
+    my ( $self, @index_keys ) = @_;
+
     my $store_node = $self->_item_store;
     foreach my $index_key (@index_keys) {
-        return if ! exists $store_node->{ $index_key };
-        $store_node = $store_node->{ $index_key };
+        return if !exists $store_node->{$index_key};
+        $store_node = $store_node->{$index_key};
     }
-    
+
     return $store_node;
 }
 

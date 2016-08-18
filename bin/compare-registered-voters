@@ -3,6 +3,7 @@
 use Modern::Perl;
 
 {
+
     package CompareRegisteredVoters;
     use Moo;
     use MooX::Options;
@@ -11,117 +12,167 @@ use Modern::Perl;
     use FOEGCL::GOTV::VoterProvider;
     use FOEGCL::GOTV::MembershipProvider;
     use FOEGCL::Logger;
+    use Carp qw( croak );
 
     option membership_csv => (
-        is => 'ro',
+        is     => 'ro',
         format => 's',
-        doc => 'path/to/friends/membership/file.csv',
-        isa => sub {
-            die "Membership CSV must be a file readable to the current user."
-            unless -e $_[0] && -f $_[0] && -r $_[0]
+        doc    => 'path/to/friends/membership/file.csv',
+        isa    => sub {
+            ## no critic (ProhibitUselessTopic)
+            croak 'Membership CSV must be a file readable to the current user.'
+              unless -e $_[0] && -f $_[0] && -r $_[0];
         },
         required => 1,
     );
 
     option voter_csv => (
-        is => 'ro',
+        is     => 'ro',
         format => 's',
-        doc => 'path/to/voter/file.csv',
-        isa => sub {
-            die "Voter CSV must be a file readable to the current user."
-            unless -e $_[0] && -f $_[0] && -r $_[0]
+        doc    => 'path/to/voter/file.csv',
+        isa    => sub {
+            ## no critic (ProhibitUselessTopic)
+            croak 'Voter CSV must be a file readable to the current user.'
+              unless -e $_[0] && -f $_[0] && -r $_[0];
         },
         required => 1,
     );
-    
+
     option logfile => (
-        is => 'ro',
+        is     => 'ro',
         format => 's',
-        doc => 'path/to/outfile',
-        isa => sub {
-            die "If logfile exists already, it must be a file writable by you."
-            unless (!-e $_[0]) || (-f $_[0] && -w $_[0])
+        doc    => 'path/to/outfile',
+        isa    => sub {
+            ## no critic (ProhibitUselessTopic)
+            croak
+              'If logfile exists already, it must be a file writable by you.'
+              if ( -e $_[0] ) && ( !-f $_[0] || !-w $_[0] );
         },
         builder => 1,
     );
 
-    has _voter_store => ( is => 'ro', isa => InstanceOf[ 'FOEGCL::GOTV::VoterStore' ], builder => 1 );
-    has _voter_provider => ( is => 'ro', isa => InstanceOf[ 'FOEGCL::GOTV::VoterProvider' ], lazy => 1, builder => 1 );
-    has _membership_provider => ( is => 'ro', isa => InstanceOf[ 'FOEGCL::GOTV::MembershipProvider' ], lazy => 1, builder => 1 );
-    has _logger => ( is => 'ro', isa => InstanceOf[ 'FOEGCL::Logger' ], lazy => 1, builder => 1 );
+    has _voter_store => (
+        is      => 'ro',
+        isa     => InstanceOf ['FOEGCL::GOTV::VoterStore'],
+        builder => 1,
+    );
+    has _voter_provider => (
+        is      => 'ro',
+        isa     => InstanceOf ['FOEGCL::GOTV::VoterProvider'],
+        lazy    => 1,
+        builder => 1,
+    );
+    has _membership_provider => (
+        is      => 'ro',
+        isa     => InstanceOf ['FOEGCL::GOTV::MembershipProvider'],
+        lazy    => 1,
+        builder => 1,
+    );
+    has _logger => (
+        is      => 'ro',
+        isa     => InstanceOf ['FOEGCL::Logger'],
+        lazy    => 1,
+        builder => 1,
+    );
 
     sub _build__voter_store {
         my $self = shift;
-    
+
         return FOEGCL::GOTV::VoterStore->new;
     }
 
     sub _build__voter_provider {
         my $self = shift;
 
-        return FOEGCL::GOTV::VoterProvider->new(
-            datafile => $self->voter_csv
-        );
+        return FOEGCL::GOTV::VoterProvider->new( datafile => $self->voter_csv );
     }
 
     sub _build__membership_provider {
         my $self = shift;
 
         return FOEGCL::GOTV::MembershipProvider->new(
-            datafile => $self->membership_csv
-        );
+            datafile => $self->membership_csv );
     }
-    
+
     sub _build_logfile {
         return 'compare-registered-voters.log';
     }
-    
+
     sub _build__logger {
         my $self = shift;
-        
-        return FOEGCL::Logger->new(
-            logfile => $self->logfile
-        );
+
+        return FOEGCL::Logger->new( logfile => $self->logfile );
     }
-        
+
     sub run {
         my $self = shift;
 
         # Read voters into memory
-        while (my $voter = $self->_voter_provider->next_record) {
-            $self->_voter_store->add_voter($voter)
+        while ( my $voter = $self->_voter_provider->next_record ) {
+            $self->_voter_store->add_voter($voter);
         }
 
         # For each membership, verify registered voter status
-        MEMBERSHIP:
-        while (my $membership = $self->_membership_provider->next_record) {
-            if ($membership->has_registered_voter) {
-                if ($self->_voter_store->any_friends_match_direct(@{ $membership->registered_voter_friends })
-                    || $self->_voter_store->any_friends_match_assisted(@{ $membership->registered_voter_friends })
-                ) {
-                    $self->_logger->log($membership->membership_id . ' Perfect.');
-                }
-                else {
-                    $self->_logger->log(
-                        $membership->membership_id . ' Check: Voter registration record not found, but expected.'
-                    );
-                }
+        while ( my $membership = $self->_membership_provider->next_record ) {
+            if ( $membership->has_registered_voter ) {
+                $self->_attempt_registered_voter_match($membership);
             }
             else {
-                if ($self->_voter_store->any_friends_match_direct(@{ $membership->friends })
-                    || $self->_voter_store->any_friends_match_assisted(@{ $membership->friends })
-                ) {
-                    $self->_logger->log(
-                        $membership->membership_id . ' Check: Voter registration record found, but not expected.'
-                    );
-                }
-                else {
-                    $self->_logger->log(
-                        $membership->membership_id . ' Confirm: No voter registration record found, and none expected.'
-                    );
-                }
+                $self->_attempt_nonregistered_voter_match($membership);
             }
         }
+
+        return;
+    }
+
+    sub _attempt_registered_voter_match {
+        my $self       = shift;
+        my $membership = shift;
+
+        if (
+            $self->_voter_store->any_friends_match_direct(
+                @{ $membership->registered_voter_friends }
+            )
+            || $self->_voter_store->any_friends_match_assisted(
+                @{ $membership->registered_voter_friends }
+            )
+          )
+        {
+            $self->_logger->add( $membership->membership_id . ' Perfect.' );
+        }
+        else {
+            $self->_logger->add( $membership->membership_id
+                  . ' Check: Voter registration record not found, but expected.'
+            );
+        }
+
+        return;
+    }
+
+    sub _attempt_nonregistered_voter_match {
+        my $self       = shift;
+        my $membership = shift;
+
+        if (
+            $self->_voter_store->any_friends_match_direct(
+                @{ $membership->friends }
+            )
+            || $self->_voter_store->any_friends_match_assisted(
+                @{ $membership->friends }
+            )
+          )
+        {
+            $self->_logger->add( $membership->membership_id
+                  . ' Check: Voter registration record found, but not expected.'
+            );
+        }
+        else {
+            $self->_logger->add( $membership->membership_id
+                  . ' Confirm: No voter registration record found, and none expected.'
+            );
+        }
+
+        return;
     }
 
     1;

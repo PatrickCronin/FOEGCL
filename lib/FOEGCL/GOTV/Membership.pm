@@ -7,19 +7,24 @@ use List::Util qw( any );
 our $VERSION = '0.01';
 
 has membership_id => ( is => 'ro', isa => Str, required => 1 );
-has friends => ( is => 'ro', isa => ArrayRef[ InstanceOf[ 'FOEGCL::GOTV::Friend' ] ], required => 1 );
+has friends => (
+    is       => 'ro',
+    isa      => ArrayRef [ InstanceOf ['FOEGCL::GOTV::Friend'] ],
+    required => 1,
+);
 
 sub has_registered_voter {
     my $self = shift;
-    
+
     return any { $_->registered_voter } @{ $self->friends };
 }
 
 sub registered_voter_friends {
     my $self = shift;
-    
-    my @registered_voter_friends = grep { $_->registered_voter } @{ $self->friends };
-    
+
+    my @registered_voter_friends =
+      grep { $_->registered_voter } @{ $self->friends };
+
     return \@registered_voter_friends;
 }
 
