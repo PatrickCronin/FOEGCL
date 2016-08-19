@@ -36,24 +36,32 @@ compare-registered-voters - Compare Friends' voter registration statuses against
 
 =over 4
 
-=item B<FOEGCL::CSVProvider>
+=item L<FOEGCL::CSVProvider>
 
-FOEGCL::CSVProvider - an extendable object that iterates over the rows of a CSV
+FOEGCL::CSVProvider - an extendable class that iterates over the rows of a CSV
 file.
 
-=item B<FOEGCL::ItemStore>
+=item L<FOEGCL::ItemStore>
 
-FOEGCL::ItemStore - an extendable object that stores items with a set of similar
+FOEGCL::ItemStore - an extendable class that stores items with a set of similar
 characteristics.
 
-=item B<FOEGCL::Logger>
+=item L<FOEGCL::Logger>
 
-FOEGCL::Logger - an extendable object that provides output logging services.
+FOEGCL::Logger - an extendable class that provides output logging services.
 
-=item FOEGCL::GOTV::____
+=item L<FOEGCL::GOTV>
 
-FOEGCL::GOTV::_____ - a set of modules that assist the compare-registered-voters
-program.
+FOEGCL::GOTV - a set of modules that assist the compare-registered-voters
+program:
+
+    L<FOEGCL::GOTV::Friend> - A Friend class for Get Out the Vote
+    L<FOEGCL::GOTV::Membership> - A Membership class for Get Out the Vote
+    L<FOEGCL::GOTV::MembershipProvider> - Iteration over Memberships in a Membership CSV
+    L<FOEGCL::GOTV::StreetAddress> - Methods for processing street addresses
+    L<FOEGCL::GOTV::Voter> - A Voter class for Get Out the Vote
+    L<FOEGCL::GOTV::VoterProvider> - Iteration over Voters in a Voter Registration CSV
+    L<FOEGCL::GOTV::VoterStore> - Indexed Voter storage and related methods
 
 =back
 

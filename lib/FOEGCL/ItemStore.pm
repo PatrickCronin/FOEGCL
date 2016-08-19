@@ -8,7 +8,7 @@ use List::Util qw( any );
 our $VERSION = '0.01';
 
 has index_keys => ( is => 'ro', isa => ArrayRef [Str], builder => 1 );
-has case_sensitive => ( is => 'ro', isa => Int, default => 0 );
+has case_sensitive => ( is => 'ro', isa => Bool, default => 0 );
 has _item_store => ( is => 'ro', isa => HashRef, default => sub { {} } );
 
 # Here to allow subclasses provide specific implementation
@@ -60,26 +60,23 @@ sub has_item_like_item_matching_str {
         }
         @{$like_items};
     }
-    else {
-        return any {
-            lc $item->$field_to_match eq lc $_->$field_to_match
-        }
-        @{$like_items};
+
+    return any {
+        CORE::fc $item->$field_to_match eq CORE::fc $_->$field_to_match
     }
+    @{$like_items};
+
 }
 
 # Collect an item's index keys
 sub _index_keys {
     my $self = shift;
     my $item = shift;
-
-    my @index_keys = ();
-    foreach my $index_key ( @{ $self->index_keys } ) {
-        push @index_keys, $item->$index_key;
+    
+    my @index_keys = map { $item->$_ } @{ $self->index_keys };
+    if (! $self->case_sensitive) {
+        @index_keys = map { CORE::fc } @index_keys;
     }
-
-    @index_keys = map { lc } @index_keys
-      if !$self->case_sensitive;
 
     return @index_keys;
 }

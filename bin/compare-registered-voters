@@ -19,9 +19,10 @@ use Modern::Perl;
         format => 's',
         doc    => 'path/to/friends/membership/file.csv',
         isa    => sub {
-            ## no critic (ProhibitUselessTopic)
-            croak 'Membership CSV must be a file readable to the current user.'
+            ## no critic (RequireCarping, ProhibitUselessTopic)
+            die 'Membership CSV must be a file readable to the current user.'
               unless -e $_[0] && -f $_[0] && -r $_[0];
+            ## use critic
         },
         required => 1,
     );
@@ -31,9 +32,10 @@ use Modern::Perl;
         format => 's',
         doc    => 'path/to/voter/file.csv',
         isa    => sub {
-            ## no critic (ProhibitUselessTopic)
-            croak 'Voter CSV must be a file readable to the current user.'
+            ## no critic (RequireCarping, ProhibitUselessTopic)
+            die 'Voter CSV must be a file readable to the current user.'
               unless -e $_[0] && -f $_[0] && -r $_[0];
+            ## use critic
         },
         required => 1,
     );
@@ -43,10 +45,10 @@ use Modern::Perl;
         format => 's',
         doc    => 'path/to/outfile',
         isa    => sub {
-            ## no critic (ProhibitUselessTopic)
-            croak
-              'If logfile exists already, it must be a file writable by you.'
+            ## no critic (RequireCarping, ProhibitUselessTopic)
+            die 'If logfile exists already, it must be a file writable by you.'
               if ( -e $_[0] ) && ( !-f $_[0] || !-w $_[0] );
+            ## use critic
         },
         builder => 1,
     );

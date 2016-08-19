@@ -72,7 +72,7 @@ sub has_voter_like_friend {
 sub _prepare_street_address_for_comparison {
     my ( $self, $street_address ) = @_;
 
-    return lc FOEGCL::GOTV::StreetAddress->standardize($street_address);
+    return CORE::fc FOEGCL::GOTV::StreetAddress->standardize($street_address);
 }
 
 # Check if any provided Friends match the index keys AND street_address of any

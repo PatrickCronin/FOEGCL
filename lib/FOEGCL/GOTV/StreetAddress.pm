@@ -8,16 +8,11 @@ use Geo::Address::Mail::Standardizer::USPS;
 sub clean {
     my $class_or_self  = shift;
     my $street_address = shift
-      or return;
+      or return q{};
 
-    # Replace all whitespace with space characters
+    # Replace all adjacent whitespace (\s+) with a single space.
     ## no critic (RequireDotMatchAnything, RequireLineBoundaryMatching)
-    $street_address =~ s/ [\f\t\r\n] / /gx;
-    ## use critic
-
-    # Replace repeating whitespace characters with a single space
-    ## no critic (RequireDotMatchAnything, RequireLineBoundaryMatching)
-    $street_address =~ s/ [ ]{2,} / /gx;
+    $street_address =~ s/ \s+ / /gx;
     ## use critic
 
     # Remove leading and trailing whitespace
@@ -33,7 +28,7 @@ sub clean {
 sub standardize {
     my $class_or_self  = shift;
     my $street_address = shift
-      or return;
+      or return q{};
 
     my $address = Geo::Address::Mail::US->new( street => $street_address, );
 

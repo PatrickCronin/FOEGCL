@@ -68,8 +68,8 @@ sub _build_parser_options {
         allow_loose_quotes  => 0,
         allow_loose_escapes => 0,
         allow_whitespace    => 0,
-        blank_is_undef      => 0,
-        empty_is_undef      => 0,
+        blank_is_undef      => 1,
+        empty_is_undef      => 1,
         verbatim            => 0,
     };
 }
@@ -112,11 +112,11 @@ sub next_record {
     my $row = $self->_parser->getline( $self->_datafile_fh );
     return if !defined $row;
 
-    return $self->_build_record($row);
+    return $self->_create_record($row);
 }
 
 # Build a hash of the relevant columns' values from a row
-sub _build_record {
+sub _create_record {
     my ( $self, $row ) = @_;
 
     my %row_record = ();
@@ -135,8 +135,9 @@ sub _build_record {
 # Remove whitespace before and after text
 sub _trim {
     my $self = shift;
-    my $text = shift
-      or return;
+    my $text = shift;
+    
+    return undef if ! defined $text;
 
     $text =~ s/ ^\s+ | \s+$ //mgx;    ## no critic (RequireDotMatchAnything)
 

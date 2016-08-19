@@ -28,8 +28,8 @@ around _build_parser_options => sub {
         allow_loose_quotes  => 0,
         allow_loose_escapes => 0,
         allow_whitespace    => 0,
-        blank_is_undef      => 0,
-        empty_is_undef      => 0,
+        blank_is_undef      => 1,
+        empty_is_undef      => 1,
         verbatim            => 0,
     };
 };
@@ -61,7 +61,7 @@ around next_record => sub {
 
     my $row_record;
     do {
-        $row_record = $self->$orig()
+        $row_record = $self->$orig
           or return;
     } while !$self->_record_is_valid($row_record);
 

@@ -24,8 +24,8 @@ around _build_parser_options => sub {
         allow_loose_quotes  => 0,
         allow_loose_escapes => 0,
         allow_whitespace    => 0,
-        blank_is_undef      => 0,
-        empty_is_undef      => 0,
+        blank_is_undef      => 1,
+        empty_is_undef      => 1,
         verbatim            => 0,
     };
 };

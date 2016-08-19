@@ -25,24 +25,9 @@ sub _build__logfile_fh {
         }
     }
 
-    open my $fh, '>:encoding(utf8)', $self->logfile
-      or croak 'Failed to open the logfile at '
-      . $self->logfile
-      . ": $OS_ERROR";
+    open my $fh, '>:encoding(utf8)', $self->logfile;
 
     return $fh;
-}
-
-# Close the _logfile_fh if it's open
-sub DEMOLISH {
-    my $self = shift;
-
-    if ( defined $self->_logfile_fh ) {
-        close $self->_logfile_fh
-          or carp "Failed to close logfile: $OS_ERROR";
-    }
-
-    return;
 }
 
 # Write some text to the logfile
@@ -51,8 +36,7 @@ sub add {
     my $text = shift
       or return;
 
-    say { $self->_logfile_fh } $text
-      or croak "Failed to write to the logfile: $OS_ERROR";
+    print { $self->_logfile_fh } $text, "\n";
 
     return $self;
 }
