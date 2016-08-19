@@ -71,11 +71,14 @@ sub _test_attributes {
     my $self = shift;
 
     my %args = $self->_default_object_args;
-    pass('No attributes to test.') && return if ( keys %args ) == 0;
-
-    my $obj = $self->_module_under_test->new(%args);
-    foreach my $arg ( keys %args ) {
-        eq_or_diff( $obj->$arg, $args{$arg}, "$arg attribute set and get" );
+    if (! scalar keys %args) {
+        pass('No attributes to test.');
+    }
+    else {
+        my $obj = $self->_module_under_test->new(%args);
+        foreach my $arg ( keys %args ) {
+            eq_or_diff( $obj->$arg, $args{$arg}, "$arg attribute set and get" );
+        }
     }
 
     return;

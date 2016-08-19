@@ -14,8 +14,8 @@ use Modern::Perl;
     use Test::More;
     use Test::Differences;
     use English qw( -no_match_vars );
-    use Carp qw( croak );
     use Readonly;
+    use autodie;
 
     Readonly my $LOGFILE_NAME => 'testlog.out';
 
@@ -38,10 +38,7 @@ use Modern::Perl;
         my $self = shift;
 
         if ( -e $self->_logfile ) {
-            unlink $self->_logfile
-              or croak q{Failed to delete test logfile at }
-              . $self->_logfile
-              . ": $OS_ERROR";
+            unlink $self->_logfile;
         }
 
         return;
@@ -125,12 +122,12 @@ use Modern::Perl;
     sub _read_logfile_contents {
         my $self = shift;
 
-        open my $fh, '<:encoding(utf8)', $self->_logfile
-          or croak
-          "Failed to open the logfile to verify its contents: $OS_ERROR";
-        my $logfile_contents =
-          do { local $INPUT_RECORD_SEPARATOR = undef; <$fh> };
-        close $fh or croak "Failed to close filehandle: $OS_ERROR";
+        open my $fh, '<:encoding(utf8)', $self->_logfile;
+        my $logfile_contents = do {
+            local $INPUT_RECORD_SEPARATOR = undef;
+            <$fh>;
+        };
+        close $fh;
 
         return $logfile_contents;
     }

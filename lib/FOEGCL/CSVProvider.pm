@@ -2,9 +2,10 @@ package FOEGCL::CSVProvider;
 
 use Moo;
 use MooX::Types::MooseLike::Base qw( :all );
-use Carp qw( carp croak );
+use FOEGCL::Error;
 use Text::CSV_XS;
 use English qw( -no_match_vars );
+use autodie;
 
 our $VERSION = '0.01';
 
@@ -13,7 +14,7 @@ has datafile => (
     required => 1,
     isa      => sub {
         ## no critic (ProhibitUselessTopic)
-        croak 'datafile must be a readable file'
+        FOEGCL::Error->throw('datafile must be a readable file')
           unless -e $_[0] && -f $_[0] && -r $_[0];
     },
 );
@@ -34,17 +35,8 @@ sub BUILD {
     my ( $self, $args ) = @_;
 
     if ( scalar keys %{ $self->{columns} } == 0 ) {
-        croak q{Can't create a } . __PACKAGE__ . q{object without columns!};
-    }
-}
-
-# Close the _datafile_fh if it's open
-sub DEMOLISH {
-    my ($self) = @_;
-
-    if ( defined $self->_datafile_fh ) {
-        close $self->_datafile_fh
-          or carp "Failed to close datafile: $OS_ERROR";
+        FOEGCL::Error->throw(
+            q{Can't create a } . __PACKAGE__ . q{object without columns!} );
     }
 
     return;
@@ -88,11 +80,7 @@ sub _build_skip_header {
 sub _build__datafile_fh {
     my ($self) = @_;
 
-    open my $fh, '<:encoding(utf8)', $self->datafile
-      or croak 'Failed to open the datafile at '
-      . $self->datafile
-      . ": $OS_ERROR";
-
+    open my $fh, '<:encoding(utf8)', $self->datafile;
     <$fh> if $self->skip_header;
 
     return $fh;
@@ -122,9 +110,9 @@ sub _create_record {
     my %row_record = ();
     foreach my $column_name ( keys %{ $self->columns } ) {
         my $column_number = $self->columns->{$column_name} - 1;
-        croak "$column_name can't be found (only "
-          . @{$row}
-          . ' columns were found'
+        FOEGCL::Error->throw( "$column_name can't be found (only "
+              . @{$row}
+              . ' columns were found' )
           if @{$row} - 1 < $column_number;
         $row_record{$column_name} = $self->_trim( $row->[$column_number] );
     }
@@ -136,8 +124,8 @@ sub _create_record {
 sub _trim {
     my $self = shift;
     my $text = shift;
-    
-    return undef if ! defined $text;
+
+    return if !defined $text;
 
     $text =~ s/ ^\s+ | \s+$ //mgx;    ## no critic (RequireDotMatchAnything)
 

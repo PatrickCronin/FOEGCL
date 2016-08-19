@@ -6,8 +6,9 @@ use FOEGCL::ItemStore;
 use FOEGCL::GOTV::StreetAddress;
 use List::Util qw( any );
 use English qw( -no_match_vars );
-use Carp qw ( croak );
 use Readonly;
+use IO::Prompter;
+use autodie;
 
 Readonly my $NUM_PRE_PROMPT_DASHES => 40;
 
@@ -103,26 +104,30 @@ sub _friend_match_assisted {
 sub _user_determine_voter_friend_match {
     my ( $self, $friend, $similar_voters ) = @_;
 
+    my $error = 0;
   PROMPT:
     while (1) {
-        print "\n",
-          q{-} x $NUM_PRE_PROMPT_DASHES, "\n",
-"No perfect match was found for the following Friend's street address:\nMatch: ",
-          $friend->street_address, "\n",
-          "Do any of the following voter records match?\n"
-          or croak "Failed to print prompt: $OS_ERROR";
+        my $prompt;
+
+        $prompt .= "Input not understood\n"
+          if $error;
+
+        $prompt .= "\n"
+          . q{-} x $NUM_PRE_PROMPT_DASHES . "\n"
+          . "No perfect match was found for the following Friend's street address:\nMatch: "
+          . $friend->street_address . "\n"
+          . "Do any of the following voter records match?\n";
 
         my $voter_num = 1;
         foreach my $voter ( @{$similar_voters} ) {
-            print "$voter_num: ", $voter->street_address, "\n"
-              or croak "Failed to print voter number: $OS_ERROR";
+            $prompt .= "$voter_num: " . $voter->street_address . "\n";
             $voter_num++;
         }
-        print "\n",
-          'Type the number of the matching record, or leave blank for none: '
-          or croak "Failed to print prompt: $OS_ERROR";
-        my $user_input = <STDIN>;
-        chomp $user_input;
+
+        $prompt .= "\n"
+          . 'Type the number of the matching record, or leave blank for none: ';
+
+        my $user_input = prompt($prompt);
 
         return if $user_input eq q{};
         return $similar_voters->[ $user_input - 1 ] if
@@ -131,8 +136,7 @@ sub _user_determine_voter_friend_match {
           ## use critic
           && $user_input <= @{$similar_voters};
 
-        print "Input not understood.\n"
-          or croak "Failed to print message about understanding: $OS_ERROR";
+        $error = 1;
     }
 
     return 'THIS SHOULD NEVER EVER HAPPEN. JUST FOR YOU, PERLCRITIC!';

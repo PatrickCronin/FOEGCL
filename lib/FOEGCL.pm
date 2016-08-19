@@ -36,21 +36,25 @@ compare-registered-voters - Compare Friends' voter registration statuses against
 
 =over 4
 
-=item L<FOEGCL::CSVProvider>
+=item L<FOEGCL::Error|FOEGCL::Error>
+
+FOEGCL::Error - a generic exception class.
+
+=item L<FOEGCL::CSVProvider|FOEGCL::CSVProvider>
 
 FOEGCL::CSVProvider - an extendable class that iterates over the rows of a CSV
 file.
 
-=item L<FOEGCL::ItemStore>
+=item L<FOEGCL::ItemStore|FOEGCL::ItemStore>
 
 FOEGCL::ItemStore - an extendable class that stores items with a set of similar
 characteristics.
 
-=item L<FOEGCL::Logger>
+=item L<FOEGCL::Logger|FOEGCL::Logger>
 
 FOEGCL::Logger - an extendable class that provides output logging services.
 
-=item L<FOEGCL::GOTV>
+=item B<FOEGCL::GOTV>
 
 FOEGCL::GOTV - a set of modules that assist the compare-registered-voters
 program:

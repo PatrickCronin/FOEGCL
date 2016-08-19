@@ -2,7 +2,6 @@ package FOEGCL::ItemStore;
 
 use Moo;
 use MooX::Types::MooseLike::Base qw( :all );
-use Carp qw( croak );
 use List::Util qw( any );
 
 our $VERSION = '0.01';
@@ -21,8 +20,10 @@ sub BUILD {
     my $self = shift;
 
     if ( scalar keys $self->index_keys == 0 ) {
-        croak 'index_keys must contain at least one key';
+        FOEGCL::Error->throw('index_keys must contain at least one key');
     }
+
+    return;
 }
 
 # Add an item to the store
@@ -65,16 +66,15 @@ sub has_item_like_item_matching_str {
         CORE::fc $item->$field_to_match eq CORE::fc $_->$field_to_match
     }
     @{$like_items};
-
 }
 
 # Collect an item's index keys
 sub _index_keys {
     my $self = shift;
     my $item = shift;
-    
+
     my @index_keys = map { $item->$_ } @{ $self->index_keys };
-    if (! $self->case_sensitive) {
+    if ( !$self->case_sensitive ) {
         @index_keys = map { CORE::fc } @index_keys;
     }
 

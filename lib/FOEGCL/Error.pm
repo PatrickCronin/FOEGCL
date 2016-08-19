@@ -1,56 +1,18 @@
-package FOEGCL::Logger;
+package FOEGCL::Error;
 
 use Moo;
-use MooX::Types::MooseLike::Base qw( :all );
-use English qw( -no_match_vars );
-use autodie;
+extends 'Throwable::Error';
 
 our $VERSION = '0.01';
-
-has logfile => (
-    is       => 'ro',
-    isa      => Str,
-    required => 1,
-);
-has _logfile_fh => ( is => 'ro', isa => FileHandle, lazy => 1, builder => 1 );
-
-# Prepare the logfile for writing
-sub _build__logfile_fh {
-    my $self = shift;
-
-    if ( -e $self->logfile ) {
-        if ( !-f $self->logfile || !-w $self->logfile ) {
-            FOEGCL::Error->throw(
-'If logfile path exists, it must be a file writable by you, so you can overwrite it.'
-            );
-        }
-    }
-
-    open my $fh, '>:encoding(utf8)', $self->logfile;
-
-    return $fh;
-}
-
-# Write some text to the logfile
-sub add {
-    my $self = shift;
-    my $text = shift
-      or return;
-
-    ## no critic (RequireCheckedSyscalls)
-    print { $self->_logfile_fh } $text, "\n";
-    ## use critic
-
-    return $self;
-}
 
 1;
 
 __END__
 
+
 =head1 NAME
 
-FOEGCL::Logger - Output logging services.
+FOEGCL::Error - A generic exception.
 
 =head1 VERSION
 
@@ -58,30 +20,33 @@ Version 0.01
 
 =head1 SYNOPSIS
 
-This module manages logging program events to an output file.
+    use FOEGCL::CSVProvider;
+    use Try::Tiny;
+    use Scalar::Util qw( blessed );
+    
+    try {
+        $csv = FOEGCL::CSVProvider->new(
+            datafile => 'file.csv'
+        );
+    }
+    catch {
+        die $_ unless blessed $_;
+        die $_ if $_->isa('FOEGCL::Error');
+        
+        # handle other exceptions
+    }
 
-    use FOEGCL::Logger;
+=head1 DESCRIPTION
 
-    my $logger = FOEGCL::Logger->new(
-        logfile => 'output.log'
-    );
+This class represents an error.
 
-    $logger->log("Friend found as Voter!");
+=head1 ATTRIBUTES
 
-=head1 ACCESSORS
-
-=head2 logfile
-
-  Specify the path the output logfile. Required. Provide with call to new(),
-  read-only thereafter.
+This class extends L<Throwable::Error|Throwable::Error> and does not add any additional attributes.
 
 =head1 METHODS
 
-=head2 add
-
-  Write some text to the logfile.
-  
-    $logger->add($text);
+This class extends L<Throwable::Error|Throwable::Error> and does not add any additional methods.
 
 =head1 AUTHOR
 
@@ -93,11 +58,16 @@ Please report any bugs or feature requests to C<bug-foegcl at rt.cpan.org>, or t
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=FOEGCL>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
+=head1 ACKNOWLEDGEMENTS
+
+This class is very much copied from L<https://www.maxmind.com|MaxMind>'s
+L<GeoIP2::Error::Generic|GeoIP2::Error::Generic> class.
+
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc FOEGCL::Logger
+    perldoc FOEGCL::Error
 
 You can also look for information at:
 
@@ -137,5 +107,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see L<http://www.gnu.org/licenses/>.
+
 
 =cut
