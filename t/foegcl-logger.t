@@ -6,8 +6,10 @@ use Modern::Perl;
 
     package Test::FOEGCL::Logger;
 
-    BEGIN { chdir 't' if -d 't' }
-    use lib '../lib', 'lib';
+    use FindBin;
+    use File::Spec::Functions qw( catdir );
+    use lib catdir( $FindBin::Bin, 'lib' );
+    
     use Moo;
     extends 'FOEGCLModuleTestTemplate';
     use MooX::Types::MooseLike::Base qw( :all );

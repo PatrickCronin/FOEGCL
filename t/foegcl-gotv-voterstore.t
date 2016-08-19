@@ -6,8 +6,10 @@ use Modern::Perl;
 
     package Test::FOEGCL::GOTV::VoterStore;
 
-    BEGIN { chdir 't' if -d 't' }
-    use lib '../lib', 'lib';
+    use FindBin;
+    use File::Spec::Functions qw( catdir catfile );
+    use lib catdir( $FindBin::Bin, 'lib' );
+    
     use Moo;
     extends 'FOEGCLModuleTestTemplate';
     use MooX::Types::MooseLike::Base qw( :all );
@@ -87,8 +89,9 @@ use Modern::Perl;
         plan( skip_all => q{test requires FOEGCL::GOTV::VoterProvider} )
           if !eval { use FOEGCL::GOTV::VoterProvider; 1 };
 
-        my $voter_provider =
-          FOEGCL::GOTV::VoterProvider->new( datafile => $TEST_VOTER_DATAFILE );
+        my $voter_provider = FOEGCL::GOTV::VoterProvider->new(
+            datafile => catfile( 't', $TEST_VOTER_DATAFILE )
+        );
 
         lives_ok {
             while ( my $voter = $voter_provider->next_record ) {

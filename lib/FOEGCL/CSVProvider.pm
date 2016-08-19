@@ -16,6 +16,7 @@ has datafile => (
         ## no critic (ProhibitUselessTopic)
         FOEGCL::Error->throw('datafile must be a readable file')
           unless -e $_[0] && -f $_[0] && -r $_[0];
+        ## use critic
     },
 );
 has columns => ( is => 'ro', isa => HashRef [Int], builder => 1 );    # 1-based

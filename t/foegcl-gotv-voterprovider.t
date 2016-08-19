@@ -6,8 +6,10 @@ use Modern::Perl;
 
     package Test::FOEGCL::GOTV::VoterProvider;
 
-    BEGIN { chdir 't' if -d 't' }
-    use lib '../lib', 'lib';
+    use FindBin;
+    use File::Spec::Functions qw( catdir catfile );
+    use lib catdir( $FindBin::Bin, 'lib' );
+    
     use Moo;
     extends 'FOEGCLModuleTestTemplate';
     use MooX::Types::MooseLike::Base qw( :all );
@@ -28,16 +30,17 @@ use Modern::Perl;
     };
 
     sub _build__datafile {
-        return $TEST_VOTER_DATAFILE;
+        return catfile( $FindBin::Bin, $TEST_VOTER_DATAFILE );
     }
 
     after _check_prereqs => sub {
         my $self = shift;
 
         # Ensure the testing datafile exists
-        if ( !-e $TEST_VOTER_DATAFILE ) {
+        if ( !-e $self->_datafile ) {
             plan( skip_all => q{The testing datafile can't be found at }
-                  . path($TEST_VOTER_DATAFILE)->absolute );
+                  . $self->_datafile
+            );
         }
     };
 

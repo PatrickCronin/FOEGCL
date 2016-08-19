@@ -6,21 +6,36 @@ use Modern::Perl;
 
     package Test::FOEGCL::CSVProvider;
 
-    BEGIN { chdir 't' if -d 't' }
-    use lib '../lib', 'lib';
+    use FindBin;
+    use File::Spec::Functions qw( catdir catfile );
+    use lib catdir( $FindBin::Bin, 'lib' );
+    
     use Moo;
     extends 'FOEGCLModuleTestTemplate';
     use MooX::Types::MooseLike::Base qw( :all );
     use Test::More;
     use Test::Differences;
     use Test::Exception;
-    use Path::Tiny;
-    use Cwd;
     use Readonly;
+
+    has _test_datafile => ( is => 'ro', isa => Str, builder => 1 );
+    has _test_invalid_datafile => ( is => 'ro', isa => Str, builder => 1 );
 
     Readonly my $TEST_DATAFILE => 'csvprovider-test-datafile.csv';
     Readonly my $TEST_INVALID_DATAFILE =>
       'csvprovider-invalid-test-datafile.csv';
+
+    sub _build__test_datafile {
+        my $self = shift;
+        
+        return catfile( $FindBin::Bin, $TEST_DATAFILE );
+    }
+    
+    sub _build__test_invalid_datafile {
+        my $self = shift;
+        
+        return catfile( $FindBin::Bin, $TEST_INVALID_DATAFILE );
+    }
 
     around _build__module_under_test => sub {
         return 'FOEGCL::CSVProvider';
@@ -30,18 +45,20 @@ use Modern::Perl;
         my $self = shift;
 
         # Ensure the testing datafile exists
-        if ( !-e $TEST_DATAFILE ) {
+        if ( !-e $self->_test_datafile ) {
             plan( skip_all => q{The testing datafile can't be found at }
-                  . path($TEST_DATAFILE)->absolute );
+                  . $self->_test_datafile
+            );
         }
 
         # Ensure the invalid testing datafile doesn't exist
-        if ( -e $TEST_INVALID_DATAFILE
-            && !unlink $TEST_INVALID_DATAFILE )
-        {
+        if ( -e $self->_test_invalid_datafile
+            && !unlink $self->_test_invalid_datafile
+        ) {
             plan( skip_all =>
 q{The invalid testing datafile shouldn't exist, and can't be deleted at }
-                  . path($TEST_INVALID_DATAFILE)->absolute );
+                  . $self->_test_invalid_datafile
+            );
         }
     };
 
@@ -66,8 +83,11 @@ q{The invalid testing datafile shouldn't exist, and can't be deleted at }
     };
 
     around _default_object_args => sub {
+        my $orig = shift;
+        my $self = shift;
+        
         return (
-            datafile    => $TEST_DATAFILE,
+            datafile    => $self->_test_datafile,
             columns     => { a => 1, b => 2, c => 3, d => 4, e => 5, f => 6, },
             skip_header => 0,
             parser_options => {
@@ -99,7 +119,7 @@ q{The invalid testing datafile shouldn't exist, and can't be deleted at }
         ## no critic (RequireDotMatchAnything, RequireLineBoundaryMatching)
         throws_ok {
             $self->_module_under_test->new(
-                datafile => $TEST_INVALID_DATAFILE,
+                datafile => $self->_test_invalid_datafile,
                 columns  => $self->_default_object_arg('columns')
             );
         }
